@@ -37,6 +37,9 @@ class Card:
             return 1
 
         return rankings.get((self.valor, self.palo), 0)
+    
+    def get_valor_y_palo(self):
+        return self.valor, self.palo
 
     def __repr__(self):
         v = self.VALORES[self.valor] +\
