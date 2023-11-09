@@ -1,14 +1,14 @@
 class Card:
 
-    palos = ["espada", "basto", "copa", "oro"]
-    valores = [None, "1", "2", "3", "4", "5", "6", "7", "10", "11", "12"]
+    PALOS = ["espada", "basto", "copa", "oro"]
+    VALORES = [None, "1", "2", "3", "4", "5", "6", "7", None, None, "10", "11", "12"]
 
-    def __init__(self, numero, palo):
-        self.numero = numero
+    def __init__(self, valor, palo):
+        self.valor = valor
         self.palo = palo
-        self.rank = self.asignar_rank()
+        self.rank = self.asign_rank()
 
-    def asignar_rank(self):
+    def asign_rank(self):
         rankings = {
             ("1", "espada"): 14,
             ("1", "basto"): 13,
@@ -27,4 +27,10 @@ class Card:
             ("5", None): 2,   
             ("4", None): 1    
     }
-        return rankings.get((self.numero, self.palo), 0)  
+        return rankings.get((self.valor, self.palo), 0)
+
+    def __repr__(self):
+        v = self.VALORES[self.valor] +\
+            " de " + \
+            self.PALOS[self.palo]
+        return v  
