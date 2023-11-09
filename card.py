@@ -13,20 +13,29 @@ class Card:
             ("1", "espada"): 14,
             ("1", "basto"): 13,
             ("7", "espada"): 12,
-            ("7", "oro"): 11,
-            ("3", None): 10,  
-            ("2", None): 9,   
+            ("7", "oro"): 11,  
             ("1", "copa"): 8,
             ("1", "oro"): 8,
-            ("12", None): 7,  
-            ("11", None): 6,  
-            ("10", None): 5,  
             ("7", "basto"): 4,
-            ("7", "copa"): 4,  
-            ("6", None): 3,   
-            ("5", None): 2,   
-            ("4", None): 1    
+            ("7", "copa"): 4,   
     }
+        if str(self.valor) == "3":
+            return 10
+        elif str(self.valor) == "2":
+            return 9
+        elif str(self.valor) == "12":
+            return 7
+        elif str(self.valor) == "11":
+            return 6
+        elif str(self.valor) == "10":
+            return 5
+        elif str(self.valor) == "6":
+            return 3
+        elif str(self.valor) == "5":
+            return 2
+        elif str(self.valor) == "4":
+            return 1
+
         return rankings.get((self.valor, self.palo), 0)
 
     def __repr__(self):

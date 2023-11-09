@@ -1,14 +1,21 @@
 from deck import Deck
 from card import Card
+from player import Player
 
-#Debug
+class Game:
 
-#test_mazo = Deck()     
-#test_card = Card("7", "espada")
+    def __init__(self):
+        self.players = [Player("Jugador 1"), Player("Jugador 2")]
+        self.deck = Deck()
 
-#test_mazo.print_deck()
-#test_mazo.shuffle_deck()
-#test_mazo.print_deck()
+    def start_game(self):
+        for player in self.players:
+            for i in range(3):  
+                card = self.deck.remove_card_deck()  
+                player.add_card(card)
 
-#rank = test_card.asign_rank()
-#print(rank)
+    
+
+
+
+

@@ -11,7 +11,7 @@ class Deck:
                     self.cards.append(Card(numero,palo))
         shuffle(self.cards)
 
-    def remove_card(self):          # Method to create players hands from deck
+    def remove_card_deck(self):          # Method to create players hands from deck
         if len(self.cards) == 0:
             return "Deck Empty"
         return self.cards.pop()
@@ -19,7 +19,7 @@ class Deck:
     def shuffle_deck(self):
         shuffle(self.cards)
     
-    def get_rc(self):
+    def get_remaining_cards(self):
         return len(self.cards)
 
     def print_deck(self):       # Debugging
