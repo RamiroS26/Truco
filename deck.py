@@ -24,4 +24,4 @@ class Deck:
 
     def print_deck(self):       # Debugging
         for card in self.cards:
-            print(card)
+            print(card.rank)

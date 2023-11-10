@@ -11,6 +11,7 @@ def run_game():
         #print(player1)
         #print(player2)
         #game.players[1].play_card(2)
+        #game.table()
     
 if __name__ == "__main__":
     run_game()

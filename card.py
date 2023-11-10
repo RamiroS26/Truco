@@ -9,37 +9,35 @@ class Card:
         self.rank = self.asign_rank()
 
     def asign_rank(self):
-        rankings = {
-            ("1", "espada"): 14,
-            ("1", "basto"): 13,
-            ("7", "espada"): 12,
-            ("7", "oro"): 11,  
-            ("1", "copa"): 8,
-            ("1", "oro"): 8,
-            ("7", "basto"): 4,
-            ("7", "copa"): 4,   
-    }
-        if str(self.valor) == "3":
-            return 10
-        elif str(self.valor) == "2":
-            return 9
-        elif str(self.valor) == "12":
-            return 7
-        elif str(self.valor) == "11":
-            return 6
-        elif str(self.valor) == "10":
-            return 5
-        elif str(self.valor) == "6":
-            return 3
-        elif str(self.valor) == "5":
-            return 2
-        elif str(self.valor) == "4":
-            return 1
-
-        return rankings.get((self.valor, self.palo), 0)
+        card_key = (str(self.valor), str(self.palo))
+        match card_key:
+            case ("1", "0"): return 14
+            case ("1", "1"): return 13
+            case ("7", "0"): return 12
+            case ("7", "3"): return 11
+            case ("3", _): return 10
+            case ("2", _): return 9
+            case ("1", "3"): return 8
+            case ("1", "2"): return 8
+            case ("12", _): return 7
+            case ("11", _): return 6
+            case ("10", _): return 5
+            case ("6", _): return 3
+            case ("5", _): return 2
+            case ("4", _): return 1
+            case ("7", "2"): return 4
+            case ("7", "1"): return 4
+            case _: return 0
+        
     
-    def get_valor_y_palo(self):
-        return self.valor, self.palo
+    def __gt__(self, c2):
+        return self.rank > c2.rank
+    
+    def __lt__(self, c2):
+        return self.rank < c2.rank
+    
+    def __eq__(self, c2):
+        return self.rank == c2.rank
 
     def __repr__(self):
         v = self.VALORES[self.valor] +\
