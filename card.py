@@ -28,16 +28,16 @@ class Card:
             case ("7", "2"): return 4
             case ("7", "1"): return 4
             case _: return 0
-        
     
-    def __gt__(self, c2):
-        return self.rank > c2.rank
     
-    def __lt__(self, c2):
-        return self.rank < c2.rank
+    #def __gt__(self, c2):           # Rich comparison methods
+    #    return self.rank > c2.rank
     
-    def __eq__(self, c2):
-        return self.rank == c2.rank
+    #def __lt__(self, c2):
+    #    return self.rank < c2.rank
+    
+    #def __eq__(self, c2):
+    #    return self.rank == c2.rank
 
     def __repr__(self):
         v = self.VALORES[self.valor] +\
