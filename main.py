@@ -2,16 +2,18 @@ from game import Game
 from player import Player
 
 def run_game():
-        game = Game()
-    #while not game.is_over():
-        game.start_hand()
-        player1 = game.players[0]
-        player2 = game.players[1]
-        game.deck.print_deck()
-        print(player1)
-        print(player2)
-        #game.players[1].play_card(2)
-        game.table()
+        print()
+        print("Ingresa el nombre del jugador 1")
+        p1 = input("-> ")
+        print("Ingresa el nombre del jugador 2")
+        p2 = input("-> ")
+        game = Game(p1, p2)
+        while not game.is_over():
+            print()
+            print("Inicia la mano.")
+            game.reset_hands()
+            game.start_hand()
+            game.table()
     
 if __name__ == "__main__":
     run_game()
