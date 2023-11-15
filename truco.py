@@ -1,6 +1,93 @@
-from deck import Deck
-from player import Player
+from random import shuffle
 import sys
+
+class Card:
+
+    PALOS = ["espada", "basto", "copa", "oro"]
+    VALORES = [None, "1", "2", "3", "4", "5", "6", "7", None, None, "10", "11", "12"]
+
+    def __init__(self, valor, palo):
+        self.valor = valor
+        self.palo = palo
+        self.rank = self.asign_rank()
+
+    def asign_rank(self):
+        card_key = (str(self.valor), str(self.palo))
+        match card_key:
+            case ("1", "0"): return 14
+            case ("1", "1"): return 13
+            case ("7", "0"): return 12
+            case ("7", "3"): return 11
+            case ("3", _): return 10
+            case ("2", _): return 9
+            case ("1", "3"): return 8
+            case ("1", "2"): return 8
+            case ("12", _): return 7
+            case ("11", _): return 6
+            case ("10", _): return 5
+            case ("6", _): return 3
+            case ("5", _): return 2
+            case ("4", _): return 1
+            case ("7", "2"): return 4
+            case ("7", "1"): return 4
+            case _: return 0
+
+    def __repr__(self):
+        v = self.VALORES[self.valor] +\
+            " de " + \
+            self.PALOS[self.palo]
+        return v 
+
+class Deck:
+
+    def __init__(self):
+        self.cards = []
+        for numero in range(1,13):          # Crear mazo
+            for palo in range(4):
+                if numero not in [8,9]:
+                    self.cards.append(Card(numero,palo))
+        shuffle(self.cards)
+
+    def remove_card_deck(self):          # Remover una carta del mazo
+        if len(self.cards) == 0:
+            return "Deck Empty"
+        return self.cards.pop()
+    
+    def shuffle_deck(self):         # Mezclar mazo
+        shuffle(self.cards)
+    
+    def get_remaining_cards(self):
+        return len(self.cards)
+
+    def print_deck(self):       # Debugging
+        for card in self.cards:
+            print(card.rank)
+
+
+class Player:
+
+    def __init__(self, name):
+        self.name = name
+        self.hand = []
+        self.points = 0
+
+    def add_card(self, card):       # Agregar una carta
+        self.hand.append(card)
+
+    def play_card(self, posicion):          # Jugar una carta
+        if 0 <= posicion < len(self.hand):
+            carta = self.hand[posicion]
+            self.hand.pop(posicion)
+            print(f"{self.name} juega la carta: {carta}")
+            return carta
+        else:
+            print(f"{self.name}, la posición {posicion} no es válida.")
+            return None
+        
+    def __repr__(self):     
+        hand_info = ", ".join(str(card) for card in self.hand)
+        return f"{self.name} | Puntos: {self.points} | Cartas en mano: {len(self.hand)} | Cartas: {hand_info}"
+
 
 class Game:
 
@@ -323,21 +410,3 @@ class Game:
             sys.exit(0)
         else:
             return False
-    
-    # Ganar mano - 1 punto
-
-    # Puntaje truco:
-    # Quiero:
-    # Truco - 2 puntos
-    # Retruco - 3 puntos
-    # Vale cuatro - 4 puntos
-    # No quiero:
-    # Truco - 1 punto
-    # Retruco - 2 puntos
-    # Vale cuatro - 3 puntos
-    
-    # Puntaje envido:
-    # Quiero:
-    # Envido - 2 puntos
-    # No quiero:
-    # Envido - 1 punto              
