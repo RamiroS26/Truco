@@ -1,7 +1,7 @@
 import settings
 import discord
 from discord.ext import commands
-from discord import app_commands
+from cogs.truco_cog import TrucoCog
 
 
 
@@ -14,8 +14,10 @@ def run():
     @bot.event
     async def on_ready():
         logger.info(f"{bot.user} connected to Discord.)")
+        await bot.add_cog(TrucoCog(bot))
         bot.tree.copy_global_to(guild=settings.GUILDS_ID)
         await bot.tree.sync(guild=settings.GUILDS_ID)
+
 
     bot.run(settings.DISCORD_BOT_TOKEN, root_logger=True)
     
