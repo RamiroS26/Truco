@@ -7,6 +7,58 @@ class Card:
     PALOS = ["espada", "basto", "copa", "oro"]
     VALORES = [None, "1", "2", "3", "4", "5", "6", "7", None, None, "10", "11", "12"]
 
+    EMOTES = {
+    (1, 0): "<:1_De_Espada:1174812805845762190>",
+    (1, 1): "<:1_De_Basto:1174812800145707038>",
+    (1, 2): "<:1_De_Copa:1174812803220127826>",
+    (1, 3): "<:1_De_Oro:1174812809301864528>",
+    
+    (2, 0): "<:2_De_Espada:1174812379394089091>",
+    (2, 1): "<:2_De_Basto:1174812812393058475>",
+    (2, 2): "<:2_De_Copa:1174812814947393637>",
+    (2, 3): "<:2_De_Oro:1174812380820148304>",
+    
+    (3, 0): "<:3_De_Espada:1174812388906762240>",
+    (3, 1): "<:3_De_Basto:1174812383940722738>",
+    (3, 2): "<:3_De_Copa:1174812386457296938>",
+    (3, 3): "<:3_De_Oro:1174812392463548416>",
+    
+    (4, 0): "<:4_De_Espada:1174812400306884720>",
+    (4, 1): "<:4_De_Basto:1174812394682323014>",
+    (4, 2): "<:4_De_Copa:1174812397790318703>",
+    (4, 3): "<:4_De_Oro:1174812401963646976>",
+    
+    (5, 0): "<:5_De_Espada:1174812410599702690>",
+    (5, 1): "<:5_De_Basto:1174812405822406666>",
+    (5, 2): "<:5_De_Copa:1174812408112496680>",
+    (5, 3): "<:5_De_Oro:1174812414173249628>",
+    
+    (6, 0): "<:6_De_Espada:1174812423258128454>",
+    (6, 1): "<:6_De_Basto:1174812416958288014>",
+    (6, 2): "<:6_De_Copa:1174812419806212198>",
+    (6, 3): "<:6_De_Oro:1174812425770500146>",
+    
+    (7, 0): "<:7_De_Espadas:1174812433710325870>",
+    (7, 1): "<:7_De_Basto:1174812429155307560>",
+    (7, 2): "<:7_De_Copa:1174812432233935038>",
+    (7, 3): "<:7_De_Oro:1174812437397110784>",
+    
+    (10, 0): "<:10_De_Espada:1174812553625477120>",
+    (10, 1): "<:10_De_Basto:1174812439754317854>",
+    (10, 2): "<:10_De_Copa:1174812442631606322>",
+    (10, 3): "<:10_De_Oro:1174812446872059994>",
+    
+    (11, 0): "<:11_De_Espada:1174812585539948564>",
+    (11, 1): "<:11_De_Basto:1174812450474967110>",
+    (11, 2): "<:11_De_Copa:1174812452777635870>",
+    (11, 3): "<:11_De_Oro:1174812457924042854>",
+    
+    (12, 0): "<:12_De_Espada:1174812467289923646>",
+    (12, 1): "<:12_De_Basto:1174812461099143178>",
+    (12, 2): "<:12_De_Copa:1174812464102244492>",
+    (12, 3): "<:12_De_Oro:1174812707824873512>",
+}
+
     def __init__(self, valor, palo):
         self.valor = valor
         self.palo = palo
@@ -26,11 +78,11 @@ class Card:
             case ("12", _): return 7
             case ("11", _): return 6
             case ("10", _): return 5
+            case ("7", "2"): return 4
+            case ("7", "1"): return 4
             case ("6", _): return 3
             case ("5", _): return 2
             case ("4", _): return 1
-            case ("7", "2"): return 4
-            case ("7", "1"): return 4
             case _: return 0
 
     def __repr__(self):
@@ -100,9 +152,10 @@ class TrucoEmbed:
     def create_embed(self):
         embed=discord.Embed(
         title="",
-        description="Presioná `Ver cartas` para ver y jugar tu mano.",
+        description="Presioná `Ver Cartas` para ver y jugar tu mano.",
         color=0x08ff31,
         type="rich"
+        
         )
         if self.game.mano == self.game.players[0]: 
             mano = self.game.players[0]
@@ -111,16 +164,68 @@ class TrucoEmbed:
             mano = self.game.players[1]
             no_mano = self.game.players[0]
 
-        embed.add_field(name="Jugadores", value=f"🖐 {mano.name} - {mano.points} puntos\n👤 {no_mano.name} - {no_mano.points} puntos", inline=True)
-        embed.add_field(name="Mesa", value="C1    C2    C3\nC4 C5 C6", inline=True)
+        embed.add_field(name="Mesa", value="[] [] []\n[] [] []", inline=False)
+        embed.add_field(name="Jugadores", value=f"🖐 *{mano.name}* - **{mano.points} puntos**\n👣 *{no_mano.name}* - **{no_mano.points} puntos**", inline=False)
 
         embed.set_author(name=f"Turno de {mano.name}", icon_url=mano.avatar)
         embed.set_footer(text="Bot creado por: BlackFlag", icon_url="https://cdn.discordapp.com/emojis/999830519552426044.webp?size=96&quality=lossless")
+        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1174763587110178887/1174763599474999357/profile.png?ex=6568c6dc&is=655651dc&hm=656cc595ccf8070d9ac77b92c647cd716be55923c9b344c271d2d4dd97a9d9fd&")
+
+        self.embed = embed
+        return embed
+    
+    def edit_embed(self):
+        embed=discord.Embed(
+        title="",
+        description="test.",
+        color=0x08ff31,
+        type="rich"
+        
+        )
+        if self.game.mano == self.game.players[0]: 
+            mano = self.game.players[0]
+            no_mano = self.game.players[1]
+        else: 
+            mano = self.game.players[1]
+            no_mano = self.game.players[0]
+
+        embed.add_field(name="Mesa", value="<:7_De_Espadas:1174812433710325870> [] []\n[] [] []", inline=False)
+        embed.add_field(name="Jugadores", value=f"🖐 *{mano.name}* - **{mano.points} puntos**\n👣 *{no_mano.name}* - **{no_mano.points} puntos**", inline=False)
+
+        embed.set_author(name=f"Turno de {mano.name}", icon_url=mano.avatar)
+        embed.set_footer(text="Bot creado por: BlackFlag", icon_url="https://cdn.discordapp.com/emojis/999830519552426044.webp?size=96&quality=lossless")
+        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1174763587110178887/1174763599474999357/profile.png?ex=6568c6dc&is=655651dc&hm=656cc595ccf8070d9ac77b92c647cd716be55923c9b344c271d2d4dd97a9d9fd&")
 
         self.embed = embed
         return embed
 
 
+class GUIView(discord.ui.View):
+    
+    def __init__(self, game, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.game = game
+        
+    
+    @discord.ui.button(label="Truco", style=discord.ButtonStyle.secondary)
+    async def truco(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+    @discord.ui.button(label="Envido", style=discord.ButtonStyle.secondary)
+    async def envido(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+    @discord.ui.button(label="Ver Cartas", style=discord.ButtonStyle.success)
+    async def cards(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.message.edit(content="Partida en curso..", view=self.game.view, embed=self.game.embed.edit_embed())
+
+    @discord.ui.button(label="Irse Al Mazo", style=discord.ButtonStyle.secondary)
+    async def mazo(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+    @discord.ui.button(label="Abandonar Partida", style=discord.ButtonStyle.danger)
+    async def exit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
         
 
         
@@ -128,6 +233,7 @@ class TrucoEmbed:
 class Game:
 
     def __init__(self, p1, p2, channel):
+        self.view = None
         self.players = [Player(p1), Player(p2)]
         self.embed = TrucoEmbed(self)
         self.deck = Deck()
@@ -141,8 +247,9 @@ class Game:
         self.mano = self.players[0]
         self.channel = channel
 
-    async def run_game(self, interaction):
-        await self.channel.send(embed=self.embed.create_embed())
+    async def run_game(self, inter):
+        self.view = GUIView(game=self)
+        await self.channel.send(embed=self.embed.create_embed(), view=self.view)
 
 
     def start_hand(self):           # Crear manos
@@ -448,12 +555,10 @@ class Game:
             print(f"El jugador {self.players[0].name} ganó la partida.")
             print(f"Puntos {self.players[0].name}: {self.players[0].points}")
             print(f"Puntos {self.players[1].name}: {self.players[1].points}")
-            sys.exit(0)
         elif self.players[1].points >=30:
             print()
             print(f"El jugador {self.players[1].name} ganó la partida.")
             print(f"Puntos {self.players[1].name}: {self.players[1].points}")
             print(f"Puntos {self.players[0].name}: {self.players[0].points}")
-            sys.exit(0)
         else:
             return False
