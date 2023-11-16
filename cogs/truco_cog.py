@@ -44,24 +44,6 @@ class MainView(discord.ui.View):
         if interaction.user == self.oponente:
             await interaction.message.edit(content="Partida rechazada.", view=None, embed=None)
 
-    """   def check(interaction):
-            return interaction.message.id == message.id
-
-        interaction, button = await self.bot.wait_for("button_click", check=check)
-        
-        if button == "aceptar":
-            await interaction.response.send_message("Partida aceptada, el juego comienza.")
-            # Iniciar un nuevo juego y agregarlo a la lista de juegos del canal
-            truco_game = Game()
-            if ctx.channel.id not in self.truco_cog.games:
-                self.truco_cog.games[ctx.channel.id] = []
-            self.truco_cog.games[ctx.channel.id].append(truco_game)
-            print(self.truco_cog.games)
-            #await truco_game.iniciar_juego(ctx.author, oponente)
-        elif button.custom_id == "rechazar":
-            await interaction.respond(content="Partida rechazada.") """
-   
-
 async def setup(bot):
     await bot.add_cog(TrucoCog(bot))
 
