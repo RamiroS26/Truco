@@ -1,5 +1,5 @@
 from random import shuffle
-import sys
+import discord
 
 class Card:
 
@@ -90,6 +90,11 @@ class Player:
 
 
 class Game:
+
+    async def run_game(self, interaction):
+        while True:
+            self.start_hand()
+            self.table()
 
     def __init__(self, p1, p2):
         self.players = [Player(p1), Player(p2)]
