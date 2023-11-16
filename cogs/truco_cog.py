@@ -32,12 +32,12 @@ class MainView(discord.ui.View):
     async def aceptar(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user == self.oponente:
             await interaction.message.edit(content="Partida aceptada, el juego comienza.", view=None, embed=None)
-            truco_game = Game(self.p1.display_name, self.oponente.display_name)
-            truco_game.run_game(interaction)
+            truco_game = Game(self.p1, self.oponente, interaction.channel)
+            await truco_game.run_game(interaction)
             if interaction.channel.id not in self.truco_cog.games:
                 self.truco_cog.games[interaction.channel.id] = []
             self.truco_cog.games[interaction.channel.id].append(truco_game)
-            print(self.truco_cog.games)
+            #print(self.truco_cog.games)
 
     @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.danger)
     async def rechazar(self, interaction: discord.Interaction, button: discord.ui.Button):

@@ -1,5 +1,6 @@
 from random import shuffle
 import discord
+from discord.ext import commands
 
 class Card:
 
@@ -66,8 +67,9 @@ class Deck:
 
 class Player:
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, player):
+        self.name = player.display_name
+        self.avatar = player.display_avatar
         self.hand = []
         self.points = 0
 
@@ -89,18 +91,59 @@ class Player:
         return f"{self.name} | Puntos: {self.points} | Cartas en mano: {len(self.hand)} | Cartas: {hand_info}"
 
 
+class TrucoEmbed:
+
+    def __init__(self, game):
+        self.game = game
+        self.embed = None
+
+    def create_embed(self):
+        embed=discord.Embed(
+        title="",
+        description="Presioná `Ver cartas` para ver y jugar tu mano.",
+        color=0x08ff31,
+        type="rich"
+        )
+        if self.game.mano == self.game.players[0]: 
+            mano = self.game.players[0]
+            no_mano = self.game.players[1]
+        else: 
+            mano = self.game.players[1]
+            no_mano = self.game.players[0]
+
+        embed.add_field(name="Jugadores", value=f"🖐 {mano.name} - {mano.points} puntos\n👤 {no_mano.name} - {no_mano.points} puntos", inline=True)
+        embed.add_field(name="Mesa", value="C1    C2    C3\nC4 C5 C6", inline=True)
+
+        embed.set_author(name=f"Turno de {mano.name}", icon_url=mano.avatar)
+        embed.set_footer(text="Bot creado por: BlackFlag", icon_url="https://cdn.discordapp.com/emojis/999830519552426044.webp?size=96&quality=lossless")
+
+        self.embed = embed
+        return embed
+
+
+        
+
+        
+
 class Game:
 
-    async def run_game(self, interaction):
-        while True:
-            self.start_hand()
-            self.table()
-
-    def __init__(self, p1, p2):
+    def __init__(self, p1, p2, channel):
         self.players = [Player(p1), Player(p2)]
+        self.embed = TrucoEmbed(self)
         self.deck = Deck()
         self.truco = False
         self.envido = False
+        self.turn = 0
+        self.player1_rounds = 0                         
+        self.player2_rounds = 0
+        self.round = 1
+        self.pardas = False
+        self.mano = self.players[0]
+        self.channel = channel
+
+    async def run_game(self, interaction):
+        await self.channel.send(embed=self.embed.create_embed())
+
 
     def start_hand(self):           # Crear manos
         print()
@@ -109,7 +152,6 @@ class Game:
             for _ in range(3):  
                 card = self.deck.remove_card_deck()  
                 player.add_card(card)
-        print("Cartas Repartidas")
                 
 
     def table(self):    # Mesa del juego           
