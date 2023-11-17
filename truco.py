@@ -63,6 +63,11 @@ class Card:
         self.valor = valor
         self.palo = palo
         self.rank = self.asign_rank()
+        self.emote = self.asign_emote()
+
+    
+    def asign_emote(self):
+        return self.EMOTES.get((self.valor, self.palo), "Emote no encontrado")
 
     def asign_rank(self):
         card_key = (str(self.valor), str(self.palo))
@@ -125,8 +130,13 @@ class Player:
         self.hand = []
         self.points = 0
 
-    def add_card(self, card):       # Agregar una carta
+    async def add_card(self, card):       # Agregar una carta
         self.hand.append(card)
+
+    async def create_hand_msg(self):
+        for card in self.hand:
+            chain += f"{card.emote} "
+        return chain
 
     def play_card(self, posicion):          # Jugar una carta
         if 0 <= posicion < len(self.hand):
@@ -148,11 +158,12 @@ class TrucoEmbed:
     def __init__(self, game):
         self.game = game
         self.embed = None
+        self.player_embed = None
 
     def create_embed(self):
         embed=discord.Embed(
         title="",
-        description="Presioná `Ver Cartas` para ver y jugar tu mano.",
+        description="Empezó la mano.",
         color=0x08ff31,
         type="rich"
         
@@ -164,25 +175,24 @@ class TrucoEmbed:
             mano = self.game.players[1]
             no_mano = self.game.players[0]
 
-        embed.add_field(name="Mesa", value="[] [] []\n[] [] []", inline=False)
         embed.add_field(name="Jugadores", value=f"🖐 *{mano.name}* - **{mano.points} puntos**\n👣 *{no_mano.name}* - **{no_mano.points} puntos**", inline=False)
 
         embed.set_author(name=f"Turno de {mano.name}", icon_url=mano.avatar)
-        embed.set_footer(text="Bot creado por: BlackFlag", icon_url="https://cdn.discordapp.com/emojis/999830519552426044.webp?size=96&quality=lossless")
         embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1174763587110178887/1174763599474999357/profile.png?ex=6568c6dc&is=655651dc&hm=656cc595ccf8070d9ac77b92c647cd716be55923c9b344c271d2d4dd97a9d9fd&")
 
         self.embed = embed
         return embed
     
+    
     def edit_embed(self):
         embed=discord.Embed(
         title="",
-        description="test.",
+        description=f"test. Presioná `Ver Cartas` para ver y jugar tu mano.",
         color=0x08ff31,
         type="rich"
         
         )
-        if self.game.mano == self.game.players[0]: 
+        if self.game.mano == self.game.players[0]:                      # HACER LAS VARIABLES PARA EL EDIT
             mano = self.game.players[0]
             no_mano = self.game.players[1]
         else: 
@@ -203,37 +213,33 @@ class TrucoEmbed:
 class GUIView(discord.ui.View):
     
     def __init__(self, game, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, timeout=None)
         self.game = game
         
     
-    @discord.ui.button(label="Truco", style=discord.ButtonStyle.secondary)
-    async def truco(self, interaction: discord.Interaction, button: discord.ui.Button):
-        pass
-
-    @discord.ui.button(label="Envido", style=discord.ButtonStyle.secondary)
-    async def envido(self, interaction: discord.Interaction, button: discord.ui.Button):
-        pass
-
     @discord.ui.button(label="Ver Cartas", style=discord.ButtonStyle.success)
-    async def cards(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.message.edit(content="Partida en curso..", view=self.game.view, embed=self.game.embed.edit_embed())
+    async def truco_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
 
-    @discord.ui.button(label="Irse Al Mazo", style=discord.ButtonStyle.secondary)
-    async def mazo(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="Irse Al Mazo", style=discord.ButtonStyle.primary)
+    async def mazo_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        #await self.game.channel.send(embed=self.embed.create_embed())
+        #await interaction.message.edit(content="Partida en curso..", view=self.game.view, embed=self.game.embed.edit_embed())
         pass
 
     @discord.ui.button(label="Abandonar Partida", style=discord.ButtonStyle.danger)
-    async def exit(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def exit_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         pass
-        
+    
+    
 
         
 
 class Game:
 
     def __init__(self, p1, p2, channel):
-        self.view = None
+        self.gui_view = None
+        self.card_view = None
         self.players = [Player(p1), Player(p2)]
         self.embed = TrucoEmbed(self)
         self.deck = Deck()
@@ -247,9 +253,18 @@ class Game:
         self.mano = self.players[0]
         self.channel = channel
 
+    
+    async def create_mesa(self):
+        await self.channel.send(content="----------------------\n|               **Mesa**              |\n----------------------")
+        mesa_msg = await self.channel.send(content="<:12_De_Espada:1174812467289923646> <:5_De_Copa:1174812408112496680> <:7_De_Espadas:1174812433710325870> \n\n<:7_De_Oro:1174812437397110784> <:2_De_Copa:1174812814947393637>")
+        return mesa_msg
+
     async def run_game(self, inter):
-        self.view = GUIView(game=self)
-        await self.channel.send(embed=self.embed.create_embed(), view=self.view)
+        self.gui_view = GUIView(game=self)
+        await self.create_mesa()
+        embed_msg = await self.channel.send(embed=self.embed.create_embed(), view=self.gui_view)
+        embed_msg
+
 
 
     def start_hand(self):           # Crear manos
