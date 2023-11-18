@@ -218,13 +218,29 @@ class HandView(discord.ui.View):
         
     @discord.ui.button(label="Envido", style=discord.ButtonStyle.primary)
     async def envido_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+        if self.game.round > 1: 
+            button.disabled = True
+        if button.disabled is not True:
+            if interaction.user.display_name == self.game.players[0].name:
+                await self.game.envido_embed(self.game.players[0].name, self.game.players[1].name)
+            if interaction.user.display_name == self.game.players[1].name:
+                await self.game.envido_embed(self.game.players[1].name, self.game.players[0].name)
+        button.disabled = True
+        await interaction.response.edit_message(view=self)
+        
 
     @discord.ui.button(label="Truco", style=discord.ButtonStyle.primary)
     async def truco_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
+        if button.disabled is not True:
+            if interaction.user.display_name == self.game.players[0].name:
+                await self.game.truco_embed(self.game.players[0].name, self.game.players[1].name)
+            if interaction.user.display_name == self.game.players[1].name:
+                await self.game.truco_embed(self.game.players[1].name, self.game.players[0].name)
+        button.disabled = True
+        await interaction.response.edit_message(view=self)
+        
 
-    @discord.ui.button(label=f"Jugar Carta", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=f"Jugar Carta", style=discord.ButtonStyle.success)
     async def play_card_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.display_name == self.game.players[0].name:
             await interaction.response.send_message(content="Clickeá en un botón para jugar esa carta", ephemeral=True, view=self.game.player1_view)
@@ -237,6 +253,7 @@ class Player1View(discord.ui.View):
     def __init__(self, game):
         super().__init__(timeout=None)
         self.game = game
+
     
 class Player2View(discord.ui.View):
 
@@ -244,10 +261,51 @@ class Player2View(discord.ui.View):
         super().__init__(timeout=None)
         self.game = game
 
+
+class EnvidoView(discord.ui.View):
+
+    def __init__(self, game):
+        super().__init__(timeout=None)
+        self.game = game
+
+    @discord.ui.button(label=f"Quiero", style=discord.ButtonStyle.success)
+    async def quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.opponent_envido == interaction.user.display_name:
+            edit_truco_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title="Envido:", color=0x08ff31, description=self.game.calculate_envido(self.game.players[0].hand, self.game.players[1].hand))
+            await edit_truco_embed.edit(embed=embed, view=None)
+            await self.game.edit_embed()
+            await edit_truco_embed.delete(delay=3)
+
+
+    @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
+    async def no_quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+class TrucoView(discord.ui.View):
+
+    def __init__(self, game):
+        super().__init__(timeout=None)
+        self.game = game
+
+    @discord.ui.button(label=f"Quiero", style=discord.ButtonStyle.success)
+    async def quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+    @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
+    async def no_quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
 class Game:
 
     def __init__(self, p1, p2, channel):
+        self.opponent_truco = False
+        self.opponent_envido = False
+        self.canto_envido = False
+        self.canto_truco = False
         self.game_mode = 30
+        self.truco_view = None
+        self.envido_view = None
         self.player1_view = None
         self.player2_view = None
         self.gui_view = None
@@ -265,7 +323,7 @@ class Game:
         self.pardas = False
         self.mano = self.players[0]
         self.channel = channel
-        self.action = ""
+        self.action = "Empezó la mano."
         self.c1 = None
         self.c2 = None
         self.c3 = None
@@ -274,7 +332,25 @@ class Game:
         self.c6 = None
         self.mesa_msg_id = None
         self.embed_msg_id = None
+        self.envido_embed_id = None
+        self.truco_embed_id = None
 
+
+    async def envido_embed(self, player, opponent):
+        self.opponent_envido = opponent
+        self.canto_envido = True
+        envido_embed = discord.Embed(title=f"{player} cantó **envido**.", colour=discord.Colour.green())
+        envido_embed = await self.channel.send(embed=envido_embed, view=self.envido_view)
+        self.envido_embed_id = envido_embed.id
+        return envido_embed
+    
+    async def truco_embed(self, player, opponent):
+        self.opponent_truco = opponent
+        self.canto_truco = True
+        truco_embed = discord.Embed(title=f"{player} cantó **truco**.", colour=discord.Colour.green())
+        truco_embed = await self.channel.send(embed=truco_embed, view=self.truco_view)
+        self.truco_embed_id = truco_embed.id
+        return truco_embed
 
     async def create_embed(self):
         embed_msg=discord.Embed(
@@ -299,7 +375,6 @@ class Game:
         embed_msg = await self.channel.send(embed=embed_msg, view=self.gui_view)
         self.embed_msg_id = embed_msg.id
         return embed_msg
-    
     
     async def edit_embed(self):
 
@@ -330,7 +405,6 @@ class Game:
         embed_msg = await self.channel.fetch_message(self.embed_msg_id)
         await embed_msg.edit(embed=embed_edit, view=self.gui_view)
 
-
     async def create_mesa(self):
         await self.channel.send(content="----------------------\n|               **Mesa**              |\n----------------------")
         mesa_msg = await self.channel.send(content="Sin Cartas")
@@ -350,6 +424,8 @@ class Game:
     async def run_game(self, inter):
         self.gui_view = GuiView(game=self)
         self.hand_view = HandView(game=self)
+        self.envido_view = EnvidoView(game=self)
+        self.truco_view = TrucoView(game=self)
         await self.create_mesa()
         await self.create_embed()
         await self.start_hand()
@@ -406,11 +482,11 @@ class Game:
                     break        
                 for _ in range(2):              # Turnos para jugar las cartas. 
                         if self.turn==0:
-                            self.player1_card_played = self.play_round(turn)
+                            self.player1_card_played = self.play_round(self.turn)
                             self.player1_card_played                             # Invocar metodo para jugar carta
                             self.turn = 1                                        # Cambiar el turno para que juegue el player 2
                         elif self.turn==1:
-                            self.player2_card_played = self.play_round(turn)
+                            self.player2_card_played = self.play_round(self.turn)
                             self.player2_card_played
                             self.turn = 0          
                 if self.player1_card_played.rank > self.player2_card_played.rank:       # Comparaciones de cartas
@@ -498,39 +574,8 @@ class Game:
             else:
                 continue
             break
-            
-         
-    def cantar_truco(self, player):
-        print()
-        print(f"{player.name} cantó truco.")
-        while True:
-            choice = input("Quiero / No quiero (q/nq):").lower()
-            if choice == "q" or choice == "nq": break
-        if choice == "q": 
-             self.truco = True
-             print("Truco aceptado")
-        else: 
-             self.truco = True
-             print("Truco no aceptado")
-
-
-    def cantar_envido(self, player):
-        print()
-        print(f"{player.name} cantó envido.")
-        while True:
-            choice = input("Quiero / No quiero (q/nq):").lower()
-            if choice == "q" or choice == "nq": break
-        if choice == "q": 
-             self.envido = True
-             print("Envido aceptado")
-             self.calculate_envido(self.players[0].hand, self.players[1].hand)
-        else: 
-             self.envido = True
-             print("Envido no aceptado")
-
 
     def calculate_envido(self, hand_p1, hand_p2):
-        print()
         ind_hand_p1 = [[carta.valor, carta.palo] for carta in hand_p1]
         ind_hand_p2 = [[carta.valor, carta.palo] for carta in hand_p2]
         self.envido = True
@@ -567,7 +612,9 @@ class Game:
                 puntos_envido_p1 = ind_hand_p1[1][0]+ind_hand_p1[2][0] + 20
         else:
             valores = [carta[0] for carta in ind_hand_p1]
-            for i in valores:
+            for i in range(2):
+                if valores[i] >= 10:
+                        valores.pop(i)
                 valores.sort(reverse=True)                     
                 puntos_envido_p1 = valores[0]
 
@@ -610,7 +657,9 @@ class Game:
                 puntos_envido_p2 = ind_hand_p2[1][0]+ind_hand_p2[2][0] + 20
         else:
             valores = [carta[0] for carta in ind_hand_p2]
-            for i in valores:
+            for i in range(2):
+                if valores[i] >= 10:
+                    valores.pop(i)
                 valores.sort(reverse=True)                     
                 puntos_envido_p2 = valores[0]
 
@@ -622,15 +671,11 @@ class Game:
                 valores.sort(reverse=True)                     
                 puntos_envido_p2 = valores[0]+valores[1]+20
 
-        if puntos_envido_p1 > puntos_envido_p2:                                 # Scores
-            self.players[0].points += 2
-            self.is_over()
-        elif puntos_envido_p2 > puntos_envido_p1:
-            self.players[1].points += 2
-            self.is_over() 
-        else:
-            self.players[1].points += 2
-            self.is_over()
+        if puntos_envido_p1 > puntos_envido_p2: self.players[0].points += 2
+        elif puntos_envido_p2 > puntos_envido_p1: self.players[1].points += 2
+        elif self.mano == self.players[0]: self.players[0].points += 2
+        else: self.players[1] += 2
+        return f"*{self.players[0].name}*: **{puntos_envido_p1}**\n*{self.players[1].name}*: **{puntos_envido_p2}**"
 
 
     def play_round(self, pl):
