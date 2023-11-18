@@ -275,7 +275,7 @@ class EnvidoView(discord.ui.View):
             embed = discord.Embed(title="Envido:", color=0x08ff31, description=self.game.calculate_envido(self.game.players[0].hand, self.game.players[1].hand))
             await edit_truco_embed.edit(embed=embed, view=None)
             await self.game.edit_embed()
-            await edit_truco_embed.delete(delay=3)
+            await edit_truco_embed.delete(delay=5)
 
 
     @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
@@ -323,7 +323,7 @@ class Game:
         self.pardas = False
         self.mano = self.players[0]
         self.channel = channel
-        self.action = "Empezó la mano."
+        self.action = "**`Empezó la mano.`**"
         self.c1 = None
         self.c2 = None
         self.c3 = None
@@ -355,7 +355,7 @@ class Game:
     async def create_embed(self):
         embed_msg=discord.Embed(
         title="",
-        description="Empezó la mano.",
+        description="`Empezó la mano.`",
         color=0x08ff31,
         type="rich"
         
@@ -612,19 +612,26 @@ class Game:
                 puntos_envido_p1 = ind_hand_p1[1][0]+ind_hand_p1[2][0] + 20
         else:
             valores = [carta[0] for carta in ind_hand_p1]
-            for i in range(2):
+            i = 0
+            while i < len(valores):
                 if valores[i] >= 10:
-                        valores.pop(i)
-                valores.sort(reverse=True)                     
-                puntos_envido_p1 = valores[0]
+                    valores.pop(i)
+                else:
+                   i += 1
+            valores.sort(reverse=True)
+            if len(valores) == 0: puntos_envido_p1 == 20                     
+            else: puntos_envido_p1 = valores[0]
 
         if ind_hand_p1[0][1] == ind_hand_p1[1][1] == ind_hand_p1[2][1]:         # Verificar si 3 palos son iguales                                    
                 valores = [carta[0] for carta in ind_hand_p1]
-                for i in range(3):
+                while i < len(valores):
                     if valores[i] >= 10:
-                        valores.pop(i)       # Crear una lista auxiliar con la mano
+                        valores.pop(i)
+                    else:
+                        i += 1       
                 valores.sort(reverse=True)                     # Ordenar la lista de forma descendente, para que los 2 valores mas grandes queden en posicion [0] y [1]
-                puntos_envido_p1 = valores[0]+valores[1]+20
+                if len(valores) == 1: puntos_envido_p1 = valores[0] + 20
+                else: puntos_envido_p1 = valores[0]+valores[1]+20
         
         if ind_hand_p2[0][1] == ind_hand_p2[1][1]:                              # P2
             if ind_hand_p2[0][0] >= 10 and ind_hand_p2[1][0] < 10:               
@@ -657,24 +664,39 @@ class Game:
                 puntos_envido_p2 = ind_hand_p2[1][0]+ind_hand_p2[2][0] + 20
         else:
             valores = [carta[0] for carta in ind_hand_p2]
-            for i in range(2):
+            i = 0
+            while i < len(valores):
                 if valores[i] >= 10:
                     valores.pop(i)
-                valores.sort(reverse=True)                     
-                puntos_envido_p2 = valores[0]
+                else:
+                    i += 1
+            valores.sort(reverse=True)                     
+            if len(valores) == 0: puntos_envido_p2 == 20                     
+            else: puntos_envido_p2 = valores[0]
 
         if ind_hand_p2[0][1] == ind_hand_p2[1][1] == ind_hand_p2[2][1]:                                           
                 valores = [carta[0] for carta in ind_hand_p2]
-                for i in range(3):
+                while i < len(valores):
                     if valores[i] >= 10:
-                        valores.pop(i)       
-                valores.sort(reverse=True)                     
-                puntos_envido_p2 = valores[0]+valores[1]+20
+                        valores.pop(i)
+                    else:
+                        i += 1       
+                valores.sort(reverse=True)                    
+                if len(valores) == 1: puntos_envido_p2 = valores[0] + 20
+                else: puntos_envido_p2 = valores[0]+valores[1]+20
 
-        if puntos_envido_p1 > puntos_envido_p2: self.players[0].points += 2
-        elif puntos_envido_p2 > puntos_envido_p1: self.players[1].points += 2
-        elif self.mano == self.players[0]: self.players[0].points += 2
-        else: self.players[1] += 2
+        if puntos_envido_p1 > puntos_envido_p2: 
+            self.players[0].points += 2
+            self.action = f"**`{self.players[0].name} ganó el envido`**."
+        elif puntos_envido_p2 > puntos_envido_p1: 
+            self.players[1].points += 2
+            self.action = f"**`{self.players[1].name} ganó el envido`**."
+        elif self.mano == self.players[0]: 
+            self.players[0].points += 2
+            self.action = f"**`{self.players[0].name} ganó el envido`**."
+        else: 
+            self.players[1] += 2
+            self.action = f"**`{self.players[1].name} ganó el envido`**."
         return f"*{self.players[0].name}*: **{puntos_envido_p1}**\n*{self.players[1].name}*: **{puntos_envido_p2}**"
 
 
