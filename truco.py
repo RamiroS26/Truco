@@ -99,6 +99,7 @@ class Card:
         return v 
 
 
+
 class Deck:
 
     def __init__(self):
@@ -140,17 +141,7 @@ class Player:
         for card in self.hand:
             chain += f"{card.emote} "
         return chain
-
-    def play_card(self, posicion):          # Jugar una carta
-        if 0 <= posicion < len(self.hand):
-            carta = self.hand[posicion]
-            self.hand.pop(posicion)
-            print(f"{self.name} juega la carta: {carta}")
-            return carta
-        else:
-            print(f"{self.name}, la posición {posicion} no es válida.")
-            return None
-        
+      
     def __repr__(self):     
         hand_info = ", ".join(str(card) for card in self.hand)
         return f"{self.name} | Puntos: {self.points} | Cartas en mano: {len(self.hand)} | Cartas: {hand_info}"
@@ -243,8 +234,12 @@ class HandView(discord.ui.View):
     @discord.ui.button(label=f"Jugar Carta", style=discord.ButtonStyle.success)
     async def play_card_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.display_name == self.game.players[0].name:
+            if self.game.turn == 0: 
+                await self.game.player1_view.turn_enable()
             await interaction.response.send_message(content="Clickeá en un botón para jugar esa carta", ephemeral=True, view=self.game.player1_view)
         if interaction.user.display_name == self.game.players[1].name:
+            if self.game.turn == 1: 
+                await self.game.player2_view.turn_enable()
             await interaction.response.send_message(content="Clickeá en un botón para jugar esa carta", ephemeral=True, view=self.game.player2_view)
 
 
@@ -253,13 +248,69 @@ class Player1View(discord.ui.View):
     def __init__(self, game):
         super().__init__(timeout=None)
         self.game = game
+    
+    async def turn_disable(self):
+        for item in self.children:
+            item.disabled = True
 
+    async def turn_enable(self):
+        for item in self.children:
+            item.disabled = False
     
 class Player2View(discord.ui.View):
 
     def __init__(self, game):
         super().__init__(timeout=None)
         self.game = game
+
+    async def turn_disable(self):
+        for item in self.children:
+            item.disabled = True
+    
+    async def turn_enable(self):
+        for item in self.children:
+            item.disabled = False
+
+class DefaultButton(discord.ui.Button):
+
+    def __init__(self, game, position, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.game = game
+        self.position = position
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.display_name == self.game.players[0].name:
+            if self.game.turn == 0:
+                self.game.player1_card_played = await self.game.play_round(0, self.position)
+                self.game.player1_card_played
+                if self.game.c1 is None: self.game.c1 = self.game.player1_card_played
+                elif self.game.c2 is None: self.game.c2 = self.game.player1_card_played
+                else: self.game.c3 = self.game.player1_card_played
+                self.game.player1_view.remove_item(self)
+                self.game.action = f"**`{self.game.players[0].name} jugó {self.game.player1_card_played}.`**"
+                self.game.turn = 1
+                await self.game.edit_embed()
+                await self.game.edit_mesa()
+            else: 
+                await self.game.player1_view.turn_disable()
+                
+        if interaction.user.display_name == self.game.players[1].name:
+            if self.game.turn == 1:
+                self.game.player2_card_played = await self.game.play_round(1, self.position)
+                self.game.player2_card_played
+                self.game.player2_view.remove_item(self)
+                if self.game.c4 is None: self.game.c4 = self.game.player2_card_played
+                elif self.game.c5 is None: self.game.c5 = self.game.player2_card_played
+                else: self.game.c6 = self.game.player2_card_played
+                self.game.action = f"**`{self.game.players[1].name} jugó {self.game.player2_card_played}.`**"
+                self.game.turn = 0
+                await self.game.edit_embed()
+                await self.game.edit_mesa()
+            else: 
+                await self.game.player2_view.turn_disable()
+                print("test2")
+
+        await interaction.response.edit_message(view=self.view)
 
 
 class EnvidoView(discord.ui.View):
@@ -339,7 +390,7 @@ class Game:
         self.player1_rounds = 0                         
         self.player2_rounds = 0
         self.player1_card_played = None  
-        self.player1_card_played = None
+        self.player2_card_played = None
         self.round = 1
         self.pardas = False
         self.mano = self.players[0]
@@ -352,6 +403,7 @@ class Game:
         self.c5 = None
         self.c6 = None
         self.mesa_msg_id = None
+        self.mesa_msg_id1 = None
         self.embed_msg_id = None
         self.envido_embed_id = None
         self.truco_embed_id = None
@@ -429,18 +481,26 @@ class Game:
     async def create_mesa(self):
         await self.channel.send(content="----------------------\n|               **Mesa**              |\n----------------------")
         mesa_msg = await self.channel.send(content="Sin Cartas")
+        mesa_msg1 = await self.channel.send(content="Sin Cartas")
         self.mesa_msg_id = mesa_msg.id
+        self.mesa_msg_id1 = mesa_msg1.id
         return mesa_msg
     
     async def edit_mesa(self):
         mesa_msg = await self.channel.fetch_message(self.mesa_msg_id)
+        mesa_msg1 = await self.channel.fetch_message(self.mesa_msg_id1)
         cards = [self.c1, self.c2, self.c3, self.c4, self.c5, self.c6]
         emotes = [c.emote if c is not None else "" for c in cards]
-        content = f"{emotes[0]} {emotes[1]} {emotes[2]}\n\n{emotes[3]} {emotes[4]} {emotes[5]}"
+        content = f"{emotes[0]} {emotes[1]} {emotes[2]}"  
+        content1 = f"{emotes[3]} {emotes[4]} {emotes[5]}"
         if content.strip():
             await mesa_msg.edit(content=content)
         else:
             await mesa_msg.edit(content="Sin Cartas")
+        if content1.strip():
+            await mesa_msg1.edit(content=content1)
+        else:
+            await mesa_msg1.edit(content="Sin Cartas")
         
     async def run_game(self, inter):
         self.gui_view = GuiView(game=self)
@@ -450,30 +510,72 @@ class Game:
         await self.create_mesa()
         await self.create_embed()
         await self.start_hand()
-        await self.edit_mesa()
-        await self.edit_embed()
         self.player1_view = Player1View(game=self)
         self.player2_view = Player2View(game=self)
+        pos1 = -1
         for card in self.players[0].hand:
-            button = discord.ui.Button(label=f"{card}", style=discord.ButtonStyle.secondary, emoji=f"{card.emote}")
-            self.player1_view.add_item(button)
+            pos1 += 1
+            self.player1_view.add_item(DefaultButton(self, pos1, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
+            print(pos1)
+        pos2 = -1
         for card in self.players[1].hand:
-            button = discord.ui.Button(label=f"{card}", style=discord.ButtonStyle.secondary, emoji=f"{card.emote}")
-            self.player2_view.add_item(button)
-
-    async def test(self):
-        self.c1=self.players[0].hand[0]
-        self.c2=self.players[0].hand[1]
-        self.c3=self.players[0].hand[2]
-        self.c4=self.players[1].hand[0]
-        self.c5=self.players[1].hand[1]
-
-    async def test2(self):
-        self.c1=None
-        self.c2=None
-        self.c3=None
-        self.c4=None
-        self.c5=None
+            pos2 += 1
+            self.player2_view.add_item(DefaultButton(self, pos2, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
+        while not (self.players[0].points == self.game_mode or self.player2_rounds == self.game_mode):
+            await self.hand()
+            await asyncio.sleep(5)
+            await self.reset_hand()
+            self.gui_view = GuiView(game=self)
+            self.hand_view = HandView(game=self)
+            self.envido_view = EnvidoView(game=self)
+            self.truco_view = TrucoView(game=self)
+            await self.start_hand()
+            await self.edit_embed()
+            await self.edit_mesa()
+            self.player1_view = Player1View(game=self)
+            self.player2_view = Player2View(game=self)
+            pos1 = -1
+            for card in self.players[0].hand:
+                pos1 += 1
+                self.player1_view.add_item(DefaultButton(self, pos1, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
+                print(pos1)
+            pos2 = -1
+            for card in self.players[1].hand:
+                pos2 += 1
+                self.player2_view.add_item(DefaultButton(self, pos2, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card))) 
+            
+    async def reset_hand(self):
+        if self.mano == self.players[0]:
+            self.mano = self.players[1]
+            self.turn = 1
+        else:
+            self.mano = self.players[0]
+            self.turn = 0
+        self.opponent_truco = None
+        self.opponent_envido = None
+        self.canto_envido = None
+        self.canto_truco = None
+        self.truco_view = None
+        self.envido_view = None
+        self.player1_view = None
+        self.player2_view = None
+        self.truco = False
+        self.envido = False
+        self.player1_rounds = 0                         
+        self.player2_rounds = 0
+        self.player1_card_played = None  
+        self.player2_card_played = None
+        self.round = 1
+        self.pardas = False
+        self.action = "**`Empezó la mano.`**"
+        self.c1 = None
+        self.c2 = None
+        self.c3 = None
+        self.c4 = None
+        self.c5 = None
+        self.c6 = None
+        self.players[0].hand.clear()
+        self.players[1].hand.clear()
 
     async def start_hand(self):           # Crear manos
         if len(self.deck.cards) < 37: self.deck = Deck()      
@@ -481,120 +583,89 @@ class Game:
             for _ in range(3):  
                 card = await self.deck.remove_card_deck()  
                 await player.add_card(card)
-        print(len(self.deck.cards)) 
-                
 
-    def hand(self):                                                           
+    async def hand(self):                                                           
         player1 = self.players[0]
         player2 = self.players[1]
-        for _ in range(3):
-            self.is_over()
+        flag1 = False
+        flag2 = False
+        flag3 = False
+        while True:
+            print("en bucle")
+            print(f"{self.round}")
+            print(f"{self.player1_rounds}")
+            print(f"{self.player2_rounds}")
             points_round=0
+
             if self.player1_rounds!=2 or self.player2_rounds!=2:
-                if self.round==3 and self.pardas and self.player1_rounds==1:       # Verificar pardas. Si P1 pardas primera mano y P1 gana segunda mano, P1 gana la mano
+                if self.round==4 and self.pardas and self.player1_rounds==1:       # Verificar pardas. Si P1 pardas primera mano y P1 gana segunda mano, P1 gana la mano
                     points_round+=1
                     if self.truco: points_round+=1                     # Verificar si se jugó un truco
-                    player1.points+=points_round                    # Sumar los puntos al chico
+                    player1.points+=points_round                    # Sumar el puntaje
+                    self.action = f"{player1} ganó la mano1."
+                    print("termino 1")
                     break                                           # Salir del bucle para empezar otra mano
-                elif self.round==3 and self.pardas and self.player2_rounds==1:
+                elif self.round==4 and self.pardas and self.player2_rounds==1:
                     points_round+=1
                     if self.truco: points_round+=1
                     player2.points+=points_round
-                    break        
-                for _ in range(2):              # Turnos para jugar las cartas. 
-                        if self.turn==0:
-                            self.player1_card_played = self.play_round(self.turn)
-                            self.player1_card_played                             # Invocar metodo para jugar carta
-                            self.turn = 1                                        # Cambiar el turno para que juegue el player 2
-                        elif self.turn==1:
-                            self.player2_card_played = self.play_round(self.turn)
-                            self.player2_card_played
-                            self.turn = 0          
-                if self.player1_card_played.rank > self.player2_card_played.rank:       # Comparaciones de cartas
-                    self.player1_rounds+=1
-                    self.round+=1
-                elif self.player1_card_played.rank < self.player2_card_played.rank:
-                    self.player2_rounds+=1
-                    self.round+=1
-                else:                                               # Si es empate = pardas
-                     self.pardas = True
-                     self.round+=1
+                    self.action = f"{player2} ganó la mano2."
+                    print("termino 2")
+                    break
+
+                if not flag1 and self.c1 is not None and self.c4 is not None:            # Comparaciones de cartas
+                    if self.c1.rank > self.c4.rank:      
+                        self.player1_rounds+=1
+                        self.round+=1
+                    elif self.c4.rank > self.c1.rank:
+                        self.player2_rounds+=1
+                        self.round+=1
+                    else:                                             # Si es empate = pardas
+                        self.pardas = True
+                        self.round+=1
+                    flag1 = True
+
+                if not flag2 and self.c2 is not None and self.c5 is not None:            
+                    if self.c2.rank > self.c5.rank:                 
+                        self.player1_rounds+=1
+                        self.round+=1
+                    elif self.c5.rank > self.c2.rank:
+                        self.player2_rounds+=1
+                        self.round+=1
+                    else:                                             
+                        self.pardas = True
+                        self.round+=1
+                    flag2 = True
+
+                if not flag3 and self.c3 is not None and self.c6 is not None:            
+                    if self.c3.rank > self.c6.rank:                 
+                        self.player1_rounds+=1
+                        self.round+=1
+                    elif self.c6.rank > self.c3.rank:
+                        self.player2_rounds+=1
+                        self.round+=1
+                    else:                                             
+                        self.pardas = True
+                        self.round+=1
+                    flag3 = True
+                
+            print(f"{self.player1_rounds} {self.player2_rounds}")
+            print(f"{self.c1} {self.c2} {self.c3} {self.c4} {self.c5} {self.c6}")
             if self.player1_rounds==2:                                   # Verificar el ganador de la mano
                 points_round+=1
                 if self.truco: points_round+=1
                 player1.points+=points_round
-                self.is_over()
+                self.action = f"{player1} ganó la mano."
+                print("termino 3")
                 break
             elif self.player2_rounds==2:                                   # Verificar el ganador de la mano
                 points_round+=1
                 if self.truco: points_round+=1
                 player1.points+=points_round
-                self.is_over()
+                self.action = f"{player2} ganó la mano."
+                print("termino 4")
                 break
-
-    
-
-    def menu(self, truco, envido, round, player):
-        print()                                         # Truco/Envido = true -> Ya se jugó, no se puede jugar
-        num=-1
-        while True:
-            if (not truco and not envido and round==1):
-                    print(f"\t\t\tTurno de {player.name}")
-                    print("-----------------------------------------------------------------------------------------")
-                    print(player)
-                    print("-----------------------------------------------------------------------------------------")
-                    print("-Ingrese 1 para cantar envido")
-                    print("-Ingrese 2 para cantar truco")
-                    print("-Ingrese 0 para continuar")
-                    num=int(input("-> "))
-                    match num:
-                        case 1:
-                            self.cantar_envido(player)
-                            self.menu(self.truco, self.envido, round, player)
-                        case 2:
-                            self.cantar_truco(player)
-                            self.menu(self.truco, self.envido, round, player)
-                        case 0: break
-                        case _:
-                            num=int(input("Ingrese el numero correcto -> "))
-            elif (truco and not envido and round==1):
-                    print(f"\t\t\tTurno de {player.name}")
-                    print("-----------------------------------------------------------------------------------------")
-                    print(player)
-                    print("-----------------------------------------------------------------------------------------")
-                    print("-Ingrese 1 para cantar envido")
-                    print("-Ingrese 0 para continuar")
-                    num=int(input("-> "))
-                    if num==1: 
-                        self.cantar_envido(player)
-                        self.menu(self.truco, self.envido, round, player)
-                    elif num==0: break
-                    else: num=int(input("Ingrese el numero correcto -> "))
-            elif(not truco):
-                    print(f"\t\t\tTurno de {player.name}")
-                    print("-----------------------------------------------------------------------------------------")
-                    print(player)
-                    print("-----------------------------------------------------------------------------------------")
-                    print("-Ingrese 1 para cantar truco")
-                    print("-Ingrese 0 para continuar")
-                    num=int(input("-> "))
-                    if num==1: 
-                        self.cantar_truco(player)
-                        self.menu(self.truco, self.envido, round, player)
-                    elif num==0: break
-                    else: num=int(input("Ingrese el numero correcto -> "))
-            elif(truco):
-                    print(f"\t\t\tTurno de {player.name}")
-                    print("-----------------------------------------------------------------------------------------")
-                    print(player)
-                    print("-----------------------------------------------------------------------------------------")
-                    print("-Ingrese 0 para continuar")
-                    num=int(input("-> "))
-                    if num==0: break
-                    else: num=int(input("Ingrese el numero correcto -> "))
-            else:
-                continue
-            break
+            await asyncio.sleep(3)
 
     def calculate_envido(self, hand_p1, hand_p2):
         ind_hand_p1 = [[carta.valor, carta.palo] for carta in hand_p1]
@@ -721,20 +792,10 @@ class Game:
         return f"*{self.players[0].name}*: **{puntos_envido_p1}**\n*{self.players[1].name}*: **{puntos_envido_p2}**"
 
 
-    def play_round(self, pl):
-            #aux_card_played = self.players[pl].hand[posicion]
-            #self.players[pl].play_card(posicion)
-            #return aux_card_played
-            pass
+    async def play_round(self, pl, position):
+        card = self.players[pl].hand[position] 
+        return card
     
-
-    def reset_hands(self):
-        for player in self.players:
-            player.hand.clear()
-            self.truco = False
-            self.envido = False
-    
-
     def is_over(self):
         if self.players[0].points >=30:
             return True
