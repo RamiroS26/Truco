@@ -221,7 +221,7 @@ class HandView1(discord.ui.View):
     async def truco_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.game.turn == 1: button.disabled = True
         else: button.disabled = False
-        if self.game.truco == True: button.disabled = True
+        if self.game.canto_truco == True: button.disabled = True
         if button.disabled is not True:
             await self.game.truco_embed(self.game.players[0], self.game.players[1])
         button.disabled = True
@@ -279,6 +279,7 @@ class HandView2(discord.ui.View):
     async def truco_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.game.turn == 0: button.disabled = True
         else: button.disabled = False
+        if self.game.canto_truco == True: button.disabled = True
         if button.disabled is not True:
             await self.game.truco_embed(self.game.players[1], self.game.players[0])
         button.disabled = True
@@ -464,6 +465,7 @@ class Game:
         self.hand_view2  = None
         self.players = [Player(p1), Player(p2)]
         self.deck = Deck()
+        self.hay_truco = False
         self.truco = False
         self.envido = False
         self.turn = 0
@@ -502,7 +504,7 @@ class Game:
     async def truco_embed(self, player, opponent):
         self.opponent_truco = opponent
         self.canto_truco = player
-        self.truco = True
+        self.canto_truco = True
         truco_embed = discord.Embed(title=f"{player.name} cantó **truco**.", colour=discord.Colour.green())
         truco_embed = await self.channel.send(embed=truco_embed, view=self.truco_view)
         self.truco_embed_id = truco_embed.id
@@ -663,6 +665,7 @@ class Game:
         self.player1_view = None
         self.player2_view = None
         self.truco = False
+        self.hay_truco = False
         self.envido = False
         self.player1_rounds = 0                         
         self.player2_rounds = 0
