@@ -504,7 +504,7 @@ class Game:
     async def truco_embed(self, player, opponent):
         self.opponent_truco = opponent
         self.canto_truco = player
-        self.canto_truco = True
+        self.hay_truco = True
         truco_embed = discord.Embed(title=f"{player.name} cantó **truco**.", colour=discord.Colour.green())
         truco_embed = await self.channel.send(embed=truco_embed, view=self.truco_view)
         self.truco_embed_id = truco_embed.id
@@ -589,50 +589,33 @@ class Game:
             await mesa_msg1.edit(content="Sin Cartas")
         
     async def run_game(self, inter):
-        self.gui_view = GuiView(game=self)
-        self.hand_view1 = HandView1(game=self)
-        self.hand_view2 = HandView2(game=self)
-        self.envido_view = EnvidoView(game=self)
-        self.truco_view = TrucoView(game=self)
-        await self.create_mesa()
-        await self.create_embed()
-        await self.start_hand()
-        self.player1_view = Player1View(game=self)
-        self.player2_view = Player2View(game=self)
-        pos1 = -1
-        for card in self.players[0].hand:
-            pos1 += 1
-            self.player1_view.add_item(DefaultButton(self, pos1, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
-        pos2 = -1
-        for card in self.players[1].hand:
-            pos2 += 1
-            self.player2_view.add_item(DefaultButton(self, pos2, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
-        while not (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode):
+        while not await self.is_game_over():
+            self.gui_view = GuiView(game=self)
+            self.hand_view1 = HandView1(game=self)
+            self.hand_view2 = HandView2(game=self)
+            self.envido_view = EnvidoView(game=self)
+            self.truco_view = TrucoView(game=self)
+            await self.create_mesa()
+            await self.create_embed()
+            await self.start_hand()
+            self.player1_view = Player1View(game=self)
+            self.player2_view = Player2View(game=self)
+            pos1 = -1
+            for card in self.players[0].hand:
+                pos1 += 1
+                self.player1_view.add_item(DefaultButton(self, pos1, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
+            pos2 = -1
+            for card in self.players[1].hand:
+                pos2 += 1
+                self.player2_view.add_item(DefaultButton(self, pos2, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
+
             await self.hand()
-            if (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode): 
-                break
-            else:
-                await asyncio.sleep(3)
-                await self.reset_hand()
-                self.gui_view = GuiView(game=self)
-                self.hand_view1 = HandView1(game=self)
-                self.hand_view2 = HandView2(game=self)
-                self.envido_view = EnvidoView(game=self)
-                self.truco_view = TrucoView(game=self)
-                await self.start_hand()
-                await self.edit_embed()
-                await self.edit_mesa()
-                self.player1_view = Player1View(game=self)
-                self.player2_view = Player2View(game=self)
-                pos1 = -1
-                for card in self.players[0].hand:
-                    pos1 += 1
-                    self.player1_view.add_item(DefaultButton(self, pos1, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
-                pos2 = -1
-                for card in self.players[1].hand:
-                    pos2 += 1
-                    self.player2_view.add_item(DefaultButton(self, pos2, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card))) 
-            
+            await self.reset_hand()
+            print("ronda nueva")
+
+
+
+    async def end_game(self):    
         print("test")
         await self.gui_view.disable_all()
         await self.hand_view1.disable_all()
@@ -682,6 +665,14 @@ class Game:
         self.c6 = None
         self.players[0].hand.clear()
         self.players[1].hand.clear()
+        delete_embed_msg = await self.channel.fetch_message(self.embed_msg_id)
+        delete_mesa1_msg = await self.channel.fetch_message(self.mesa_msg_id)
+        delete_mesa2_msg = await self.channel.fetch_message(self.mesa_msg_id1)
+        delete_mesa3_msg = await self.channel.fetch_message(self.mesa_msg_id2)
+        await delete_embed_msg.delete()
+        await delete_mesa1_msg.delete()
+        await delete_mesa2_msg.delete()
+        await delete_mesa3_msg.delete()
 
     async def start_hand(self):           # Crear manos
         if len(self.deck.cards) < 37: self.deck = Deck()      
@@ -690,38 +681,42 @@ class Game:
                 card = await self.deck.remove_card_deck()  
                 await player.add_card(card)
 
-    async def hand(self):                                                           
+    async def is_game_over(self):
+        if (self.players[0].points or self.players[1].points) == self.game_mode: return True
+        else: return False
+
+    async def hand(self):
         player1 = self.players[0]
         player2 = self.players[1]
         flag1 = False
         flag2 = False
-        flag3 = False
-        while True:    
+        flag3 = False  
+        while True:  
             points_round=0
-            if (self.players[0].points == self.game_mode or self.players[1].points == self.game_mode): 
-                break
-            if self.player1_rounds!=2 or self.player2_rounds!=2:
-                if self.round==4 and self.pardas and self.player1_rounds==1:       # Verificar pardas. Si P1 pardas primera mano y P1 gana segunda mano, P1 gana la mano
+            if await self.is_game_over(): break
+            if self.player1_rounds!=2 or self.player2_rounds!=2:                        # PARDAS
+                if self.round==4 and self.pardas and self.player1_rounds==1:       
                     points_round+=1
-                    if self.truco: points_round+=1                     # Verificar si se jugó un truco
-                    player1.points+=points_round                    # Sumar el puntaje
+                    if self.truco: points_round+=1                     
+                    player1.points+=points_round                    
                     self.action = f"**`{player1.name} ganó la mano.`**"
-                    break                                           # Salir del bucle para empezar otra mano
-                elif self.round==4 and self.pardas and self.player2_rounds==1:
+                    break                                          
+                elif self.round==3 and self.pardas and self.player2_rounds==1:
                     points_round+=1
                     if self.truco: points_round+=1
                     player2.points+=points_round
                     self.action = f"**`{player2.name} ganó la mano.`**"
                     break
 
-                if not flag1 and self.c1 is not None and self.c4 is not None:            # Comparaciones de cartas
+                if not flag1 and (self.c1 is not None and self.c4 is not None):
+                    print("test1")              
                     if self.c1.rank > self.c4.rank:      
                         self.player1_rounds+=1
                         self.round+=1
                         self.turn = 0
                         await self.edit_embed()
                         while True:
-                            if (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode): break
+                            if await self.is_game_over(): break
                             if self.player2_rounds==2 or self.player1_rounds==2:
                                 break  
                             if self.c2 is not None:
@@ -736,7 +731,7 @@ class Game:
                         self.turn = 1
                         await self.edit_embed()
                         while True:
-                            if (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode): break
+                            if await self.is_game_over(): break
                             if self.player2_rounds==2 or self.player1_rounds==2:
                                 break  
                             if self.c5 is not None:
@@ -751,7 +746,7 @@ class Game:
                             self.turn = 0
                             await self.edit_embed()
                             while True:
-                                if (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode): break
+                                if await self.is_game_over(): break
                                 if self.player2_rounds==2 or self.player1_rounds==2:
                                     break  
                                 if self.c2 is not None:
@@ -763,7 +758,7 @@ class Game:
                             self.turn = 1
                             await self.edit_embed()
                             while True:
-                                if (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode): break
+                                if await self.is_game_over(): break
                                 if self.player2_rounds==2 or self.player1_rounds==2:
                                     break  
                                 if self.c5 is not None:
@@ -773,14 +768,15 @@ class Game:
                                 await asyncio.sleep(1)
                     flag1 = True
 
-                if not flag2 and self.c2 is not None and self.c5 is not None:            
+                if not flag2 and self.c2 is not None and self.c5 is not None:
+                    print("test2")            
                     if self.c2.rank > self.c5.rank:                 
                         self.player1_rounds+=1
                         self.round+=1
                         self.turn = 0
                         await self.edit_embed()
                         while True:
-                            if (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode): break
+                            if await self.is_game_over(): break
                             if self.player2_rounds==2 or self.player1_rounds==2:
                                 break
                             if self.c3 is not None:
@@ -794,7 +790,7 @@ class Game:
                         self.turn = 1
                         await self.edit_embed()
                         while True:
-                            if (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode): break
+                            if await self.is_game_over(): break
                             if self.player2_rounds==2 or self.player1_rounds==2:
                                 break
                             if self.c6 is not None:
@@ -809,7 +805,7 @@ class Game:
                         if self.mano == self.players[0]: 
                             self.turn = 0
                             while True:
-                                if (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode): break
+                                if await self.is_game_over(): break
                                 if self.player2_rounds==2 or self.player1_rounds==2:
                                     break
                                 if self.c3 is not None:
@@ -821,7 +817,7 @@ class Game:
                             self.turn = 1
                             await self.edit_embed()
                             while True:
-                                if (self.players[0].points >= self.game_mode or self.players[1].points >= self.game_mode): break
+                                if await self.is_game_over(): break
                                 if self.player2_rounds==2 or self.player1_rounds==2:
                                     break
                                 if self.c6 is not None:
@@ -831,7 +827,8 @@ class Game:
                                 await asyncio.sleep(1)
                     flag2 = True
 
-                if not flag3 and self.c3 is not None and self.c6 is not None:            
+                if not flag3 and self.c3 is not None and self.c6 is not None:
+                    print("test3")               
                     if self.c3.rank > self.c6.rank:                 
                         self.player1_rounds+=1
                         self.round+=1
@@ -847,7 +844,7 @@ class Game:
                         await self.edit_embed()
                     flag3 = True
                 
-            if self.player1_rounds==2:                                   # Verificar el ganador de la mano
+            if self.player1_rounds==2:                                   
                 points_round+=1
                 if self.truco: points_round+=1
                 player1.points+=points_round
@@ -987,7 +984,6 @@ class Game:
             self.players[1] += 2
             self.action = f"**`{self.players[1].name} ganó el envido`**."
         return f"*{self.players[0].name}*: **{puntos_envido_p1}**\n*{self.players[1].name}*: **{puntos_envido_p2}**"
-
 
     async def play_round(self, pl, position):
         card = self.players[pl].hand[position] 
