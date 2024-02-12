@@ -371,9 +371,7 @@ class DefaultButton(discord.ui.Button):     # cards button
                 self.game.player1_view.remove_item(self)
                 self.game.action = f"**`{self.game.players[0].name} jugó {self.game.player1_card_played}.`**"
                 await self.game.edit_mesa()
-                print(f"{self.game.round}, {self.game.c1}, {self.game.c4}")
                 if self.game.round == 1 and (not self.game.c1 or not self.game.c4):
-                    print("entro1")
                     self.game.turn = 1
                 await self.game.edit_embed()
             else: 
@@ -390,9 +388,7 @@ class DefaultButton(discord.ui.Button):     # cards button
                 else: self.game.c6 = self.game.player2_card_played
                 self.game.action = f"**`{self.game.players[1].name} jugó {self.game.player2_card_played}.`**"
                 await self.game.edit_mesa()
-                print(f"{self.game.round}, {self.game.c1}, {self.game.c4}")
                 if self.game.round == 1 and (not self.game.c1 or not self.game.c4):
-                    print("entro2")
                     self.game.turn = 0
                 await self.game.edit_embed()    
             else: 
@@ -644,6 +640,7 @@ class FaltaEnvidoView(discord.ui.View):
             await self.game.edit_embed()
             await edit_envido_embed.delete(delay=3)
 
+
 class TrucoView(discord.ui.View):
 
     def __init__(self, game):
@@ -822,6 +819,7 @@ class Game:
         self.envido_embed_id = envido_embed.id
         return envido_embed
     
+
     async def truco_embed(self, player, opponent):
         await self.hand_view1.disable_all()
         await self.hand_view2.disable_all()
@@ -832,6 +830,7 @@ class Game:
         truco_embed = await self.channel.send(embed=truco_embed, view=self.truco_view)
         self.truco_embed_id = truco_embed.id
         return truco_embed
+
 
     async def create_embed(self):
         embed_msg=discord.Embed(
@@ -857,6 +856,7 @@ class Game:
         self.embed_msg_id = embed_msg.id
         return embed_msg
     
+
     async def edit_embed(self):
 
         embed_edit=discord.Embed(
@@ -886,15 +886,17 @@ class Game:
         embed_msg = await self.channel.fetch_message(self.embed_msg_id)
         await embed_msg.edit(embed=embed_edit, view=self.gui_view)
 
+
     async def create_mesa(self):
         mesa_msg2 = await self.channel.send(content="----------------------\n|               **Mesa**              |\n----------------------")
-        mesa_msg = await self.channel.send(content="⌧               ⌧             ⌧")
-        mesa_msg1 = await self.channel.send(content="⌧               ⌧             ⌧")
+        mesa_msg = await self.channel.send(content="⠀")
+        mesa_msg1 = await self.channel.send(content="⠀")
         self.mesa_msg_id = mesa_msg.id
         self.mesa_msg_id1 = mesa_msg1.id
         self.mesa_msg_id2 = mesa_msg2.id
         return mesa_msg
     
+
     async def edit_mesa(self):
         mesa_msg = await self.channel.fetch_message(self.mesa_msg_id)
         mesa_msg1 = await self.channel.fetch_message(self.mesa_msg_id1)
@@ -905,12 +907,13 @@ class Game:
         if content.strip():
             await mesa_msg.edit(content=content)
         else:
-            await mesa_msg.edit(content="Sin Cartas")
+            await mesa_msg.edit(content="⠀")
         if content1.strip():
             await mesa_msg1.edit(content=content1)
         else:
-            await mesa_msg1.edit(content="Sin Cartas")
-        
+            await mesa_msg1.edit(content="⠀")
+
+
     async def run_game(self, inter):
         while not await self.is_game_over():
             self.gui_view = GuiView(game=self)
@@ -933,9 +936,6 @@ class Game:
                 self.player2_view.add_item(DefaultButton(self, pos2, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
 
             await self.hand()
-            print(self.players[0].points)
-            print(self.players[1].points)
-            print(await self.is_game_over())
             if not await self.is_game_over(): 
                 asyncio.sleep(2)
                 await self.reset_hand()
@@ -1006,16 +1006,18 @@ class Game:
         await delete_mesa3_msg.delete(delay=2)
 
 
-    async def start_hand(self):           # Crear manos
+    async def start_hand(self):           # create hand
         if len(self.deck.cards) < 37: self.deck = Deck()      
         for player in self.players:
             for _ in range(3):  
                 card = await self.deck.remove_card_deck()  
                 await player.add_card(card)
 
+
     async def is_game_over(self):
         if (self.players[0].points or self.players[1].points) >= self.game_mode: return True
         else: return False
+
 
     async def hand(self):
         player1 = self.players[0]
@@ -1201,7 +1203,6 @@ class Game:
 
             await asyncio.sleep(1)
 
-                
 
     def calculate_envido(self, hand_p1, hand_p2):
         ind_hand_p1 = [[carta.valor, carta.palo] for carta in hand_p1]
@@ -1352,6 +1353,7 @@ class Game:
             self.action = f"**`{self.players[1].name} ganó el envido`**."
         return f"*{self.players[0].name}*: **{puntos_envido_p1}**\n*{self.players[1].name}*: **{puntos_envido_p2}**"
 
+
     async def play_round(self, pl, position):
         card = self.players[pl].hand[position] 
-        return card
+        return card 
