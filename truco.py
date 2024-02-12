@@ -160,12 +160,12 @@ class GuiView(discord.ui.View):
     
     @discord.ui.button(label="Ver Cartas", style=discord.ButtonStyle.success)
     async def cards_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.display_name == self.game.players[0].name:
+        if interaction.user.display_name == self.game.players[0].name and not self.game.hay_truco:
             if self.game.turn == 1:
                 await self.game.hand_view1.disable_all()
             else: await self.game.hand_view1.enable_all()
 
-        if interaction.user.display_name == self.game.players[1].name:
+        if interaction.user.display_name == self.game.players[1].name and not self.game.hay_truco:
             if self.game.turn == 0:
                 await self.game.hand_view2.disable_all()
             else: await self.game.hand_view2.enable_all()
@@ -353,7 +353,7 @@ class Player2View(discord.ui.View):
             item.disabled = False
 
 
-class DefaultButton(discord.ui.Button):
+class DefaultButton(discord.ui.Button):     # cards button
 
     def __init__(self, game, position, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -371,7 +371,9 @@ class DefaultButton(discord.ui.Button):
                 self.game.player1_view.remove_item(self)
                 self.game.action = f"**`{self.game.players[0].name} jugó {self.game.player1_card_played}.`**"
                 await self.game.edit_mesa()
-                if self.game.round == 1 and self.game.c1 or self.game.c4 is None :
+                print(f"{self.game.round}, {self.game.c1}, {self.game.c4}")
+                if self.game.round == 1 and (not self.game.c1 or not self.game.c4):
+                    print("entro1")
                     self.game.turn = 1
                 await self.game.edit_embed()
             else: 
@@ -388,7 +390,9 @@ class DefaultButton(discord.ui.Button):
                 else: self.game.c6 = self.game.player2_card_played
                 self.game.action = f"**`{self.game.players[1].name} jugó {self.game.player2_card_played}.`**"
                 await self.game.edit_mesa()
-                if self.game.round == 1 and self.game.c1 or self.game.c4 is None :
+                print(f"{self.game.round}, {self.game.c1}, {self.game.c4}")
+                if self.game.round == 1 and (not self.game.c1 or not self.game.c4):
+                    print("entro2")
                     self.game.turn = 0
                 await self.game.edit_embed()    
             else: 
@@ -401,16 +405,17 @@ class EnvidoView(discord.ui.View):
     def __init__(self, game):
         super().__init__(timeout=None)
         self.game = game
+        self.flag = 2
 
     @discord.ui.button(label=f"Quiero", style=discord.ButtonStyle.success)
     async def quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.game.opponent_envido.name == interaction.user.display_name:
+            self.envido = True
             edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
             embed = discord.Embed(title=f"{self.game.opponent_envido.name}: Quiero", color=0x08ff31, description=self.game.calculate_envido(self.game.players[0].hand, self.game.players[1].hand))
             await edit_envido_embed.edit(embed=embed, view=None)
             await self.game.edit_embed()
-            await edit_envido_embed.delete(delay=5)
-
+            await edit_envido_embed.delete(delay=3)
 
     @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
     async def no_quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -422,8 +427,222 @@ class EnvidoView(discord.ui.View):
             self.game.canto_envido.points += 1
             await self.game.edit_embed()
             await edit_envido_embed.delete(delay=5)
-            await asyncio.sleep(2)
 
+    @discord.ui.button(label=f"Envido", style=discord.ButtonStyle.blurple)
+    async def envido2_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.opponent_envido.name == interaction.user.display_name:
+            self.game.envido = True
+            self.game.envido_view = Envido2View(self.game)
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.opponent_envido.name}: Envido", color=0xffff00)
+            await edit_envido_embed.edit(embed=embed)
+            await self.game.edit_embed()
+            await interaction.response.edit_message(view=self.game.envido_view)
+    
+    @discord.ui.button(label=f"Real envido", style=discord.ButtonStyle.blurple)
+    async def renvido_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.opponent_envido.name == interaction.user.display_name:
+            self.game.envido = True
+            self.flag = 1
+            self.game.envido_view = RealEnvidoView(self.game, self.flag)
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.opponent_envido.name}: Real envido", color=0xffff00)
+            await edit_envido_embed.edit(embed=embed)
+            await self.game.edit_embed()
+            await interaction.response.edit_message(view=self.game.envido_view)
+    
+    @discord.ui.button(label=f"Falta envido", style=discord.ButtonStyle.blurple)
+    async def fenvido_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.opponent_envido.name == interaction.user.display_name:
+            self.game.envido = True
+            self.flag = 1
+            self.game.envido_view = FaltaEnvidoView(self.game, self.flag)
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.opponent_envido.name}: Falta envido", color=0xffff00)
+            await edit_envido_embed.edit(embed=embed)
+            await self.game.edit_embed()
+            await interaction.response.edit_message(view=self.game.envido_view)
+    
+
+class Envido2View(discord.ui.View):
+
+    def __init__(self, game):
+        super().__init__(timeout=None)
+        self.game = game
+        self.flag = 1
+
+    @discord.ui.button(label=f"Quiero", style=discord.ButtonStyle.success)
+    async def quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.canto_envido.name == interaction.user.display_name:
+            self.game.envido2 = True
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.canto_envido.name}: Quiero", color=0x08ff31, description=self.game.calculate_envido(self.game.players[0].hand, self.game.players[1].hand))
+            await edit_envido_embed.edit(embed=embed, view=None)
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=3)
+
+    @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
+    async def no_quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.canto_envido.name == interaction.user.display_name:
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.opponent_envido.name}: No quiero", color=0xff0000)
+            await edit_envido_embed.edit(embed=embed, view=None)
+            self.game.action = f"**`{self.game.canto_envido.name} no aceptó el envido`**"
+            self.game.opponent_envido.points += 2
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=5)
+    
+    @discord.ui.button(label=f"Real envido", style=discord.ButtonStyle.blurple)
+    async def renvido_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.canto_envido.name == interaction.user.display_name:
+            self.game.envido2 = True
+            self.flag = 2
+            self.game.envido_view = RealEnvidoView(self.game, self.flag)
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.canto_envido.name}: Real envido", color=0xffff00)
+            await edit_envido_embed.edit(embed=embed)
+            await self.game.edit_embed()
+            await interaction.response.edit_message(view=self.game.envido_view)
+    
+    @discord.ui.button(label=f"Falta envido", style=discord.ButtonStyle.blurple)
+    async def fenvido_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.canto_envido.name == interaction.user.display_name:
+            self.game.envido2 = True
+            self.flag = 2
+            self.game.envido_view = FaltaEnvidoView(self.game, self.flag)
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.canto_envido.name}: Falta envido", color=0xffff00)
+            await edit_envido_embed.edit(embed=embed)
+            await self.game.edit_embed()
+            await interaction.response.edit_message(view=self.game.envido_view)
+
+
+class RealEnvidoView(discord.ui.View):
+
+    def __init__(self, game, flag):
+        super().__init__(timeout=None)
+        self.game = game
+        self.flag = flag
+
+    @discord.ui.button(label=f"Quiero", style=discord.ButtonStyle.success)
+    async def quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.opponent_envido.name == interaction.user.display_name and self.flag == 2:
+            self.game.real_envido = True
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.opponent_envido.name}: Quiero", color=0x08ff31, description=self.game.calculate_envido(self.game.players[0].hand, self.game.players[1].hand))
+            await edit_envido_embed.edit(embed=embed, view=None)
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=3)
+        
+        elif self.game.canto_envido.name == interaction.user.display_name and self.flag == 1:
+            self.game.real_envido = True
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.canto_envido.name}: Quiero", color=0x08ff31, description=self.game.calculate_envido(self.game.players[0].hand, self.game.players[1].hand))
+            await edit_envido_embed.edit(embed=embed, view=None)
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=3)
+
+    @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
+    async def no_quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.opponent_envido.name == interaction.user.display_name and self.flag == 2:
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.opponent_envido.name}: No quiero", color=0xff0000)
+            await edit_envido_embed.edit(embed=embed, view=None)
+            self.game.action = f"**`{self.game.opponent_envido.name} no aceptó el envido`**"
+            if self.game.envido: 
+                self.game.canto_envido.points += 2
+                if self.game.envido2:
+                    self.game.canto_envido.points += 2
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=3)
+        
+        elif self.game.canto_envido.name == interaction.user.display_name and self.flag == 1:
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.canto_envido.name}: No quiero", color=0xff0000)
+            await edit_envido_embed.edit(embed=embed, view=None)
+            self.game.action = f"**`{self.game.canto_envido.name} no aceptó el envido`**"
+            if self.game.envido: 
+                self.game.opponent_envido.points += 2
+                if self.game.envido2:
+                    self.game.opponent_envido.points += 2
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=3)
+    
+    @discord.ui.button(label=f"Falta envido", style=discord.ButtonStyle.blurple)
+    async def fenvido_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.opponent_envido.name == interaction.user.display_name and self.flag == 2:
+            self.game.real_envido = True
+            self.flag = 1
+            self.game.envido_view = FaltaEnvidoView(self.game, self.flag)
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.opponent_envido.name}: Falta envido", color=0x08ff31)
+            await edit_envido_embed.edit(embed=embed)
+            await self.game.edit_embed()
+            await interaction.response.edit_message(view=self.game.envido_view)
+
+        elif self.game.canto_envido.name == interaction.user.display_name and self.flag == 1:
+            self.game.real_envido = True
+            self.flag = 2
+            self.game.envido_view = FaltaEnvidoView(self.game, self.flag)
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.canto_envido.name}: Falta envido", color=0xffff00)
+            await edit_envido_embed.edit(embed=embed)
+            await self.game.edit_embed()
+            await interaction.response.edit_message(view=self.game.envido_view)
+
+
+class FaltaEnvidoView(discord.ui.View):
+
+    def __init__(self, game, flag):
+        super().__init__(timeout=None)
+        self.game = game
+        self.flag = flag
+
+    @discord.ui.button(label=f"Quiero", style=discord.ButtonStyle.success)
+    async def quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.canto_envido.name == interaction.user.display_name and self.flag == 1:
+            self.game.falta_envido = True
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.canto_envido.name}: Quiero", color=0x08ff31, description=self.game.calculate_envido(self.game.players[0].hand, self.game.players[1].hand))
+            await edit_envido_embed.edit(embed=embed, view=None)
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=3)
+
+        elif self.game.opponent_envido.name == interaction.user.display_name and self.flag == 2:
+            self.game.falta_envido = True
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.opponent_envido.name}: Quiero", color=0x08ff31, description=self.game.calculate_envido(self.game.players[0].hand, self.game.players[1].hand))
+            await edit_envido_embed.edit(embed=embed, view=None)
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=3)
+
+    @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
+    async def no_quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.game.canto_envido.name == interaction.user.display_name and self.flag == 1:
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.canto_envido.name}: No quiero", color=0xff0000)
+            await edit_envido_embed.edit(embed=embed, view=None)
+            self.game.action = f"**`{self.game.canto_envido.name} no aceptó el envido`**"
+            if self.game.envido: 
+                self.game.opponent_envido.points += 2
+                if self.game.envido2:
+                    self.game.opponent_envido.points += 2
+                    if self.game.real_envido: self.game.opponent_envido.points += 3
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=3)
+        
+        elif self.game.opponent_envido.name == interaction.user.display_name and self.flag == 2:
+            edit_envido_embed = await self.game.channel.fetch_message(self.game.envido_embed_id)
+            embed = discord.Embed(title=f"{self.game.opponent_envido.name}: No quiero", color=0xff0000)
+            await edit_envido_embed.edit(embed=embed, view=None)
+            self.game.action = f"**`{self.game.opponent_envido.name} no aceptó el envido`**"
+            if self.game.envido: 
+                self.game.canto_envido.points += 2
+                if self.game.envido2:
+                    self.game.canto_envido.points += 2
+                    if self.game.real_envido: self.game.canto_envido.points += 3
+            await self.game.edit_embed()
+            await edit_envido_embed.delete(delay=3)
 
 class TrucoView(discord.ui.View):
 
@@ -434,12 +653,15 @@ class TrucoView(discord.ui.View):
     @discord.ui.button(label=f"Quiero", style=discord.ButtonStyle.success)
     async def quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.game.opponent_truco.name == interaction.user.display_name:
+            self.game.hay_truco = False
             edit_truco_embed = await self.game.channel.fetch_message(self.game.truco_embed_id)
             embed = discord.Embed(title=f"{self.game.opponent_truco.name}: Quiero", color=0x08ff31)
             await edit_truco_embed.edit(embed=embed, view=None)
             self.game.action = f"**`{self.game.opponent_truco.name} aceptó el truco`**"
             self.game.truco = True
             await self.game.edit_embed()
+            if self.game.canto_truco.name == self.game.players[0].name: await self.game.hand_view1.enable_all()
+            else: await self.game.hand_view2.enable_all()
             await edit_truco_embed.delete(delay=2)
 
     @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
@@ -457,9 +679,10 @@ class TrucoView(discord.ui.View):
     @discord.ui.button(label=f"Quiero Retruco", style=discord.ButtonStyle.blurple)
     async def quiero_retruco_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.game.opponent_truco.name == interaction.user.display_name:
+            self.game.truco = True
             self.game.truco_view = RetrucoView(self.game)
             edit_truco_embed = await self.game.channel.fetch_message(self.game.truco_embed_id)
-            embed = discord.Embed(title=f"{self.game.opponent_truco.name} cantó **retruco**.", color=0xffff00)
+            embed = discord.Embed(title=f"{self.game.opponent_truco.name}: Quiero **Retruco**", color=0xffff00)
             await edit_truco_embed.edit(embed=embed)
             await interaction.response.edit_message(view=self.game.truco_view)
 
@@ -473,12 +696,15 @@ class RetrucoView(discord.ui.View):
     @discord.ui.button(label=f"Quiero", style=discord.ButtonStyle.success)
     async def quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.game.canto_truco.name == interaction.user.display_name:
+            self.game.hay_truco = False
             edit_truco_embed = await self.game.channel.fetch_message(self.game.truco_embed_id)
             embed = discord.Embed(title=f"{self.game.canto_truco.name}: Quiero", color=0x08ff31)
             await edit_truco_embed.edit(embed=embed, view=None)
             self.game.action = f"**`{self.game.canto_truco.name} aceptó el retruco`**"
             self.game.retruco = True
             await self.game.edit_embed()
+            if self.game.canto_truco.name == self.game.players[0].name: await self.game.hand_view1.enable_all()
+            else: await self.game.hand_view2.enable_all()
             await edit_truco_embed.delete(delay=2)
 
     @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
@@ -497,9 +723,10 @@ class RetrucoView(discord.ui.View):
     @discord.ui.button(label=f"Quiero Vale cuatro", style=discord.ButtonStyle.blurple)
     async def quiero_vale4_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.game.canto_truco.name == interaction.user.display_name:
+            self.game.retruco = True
             self.game.truco_view = ValeCuatroView(self.game)
             edit_truco_embed = await self.game.channel.fetch_message(self.game.truco_embed_id)
-            embed = discord.Embed(title=f"{self.game.canto_truco.name} cantó **Vale cuatro**.", color=0xffff00)
+            embed = discord.Embed(title=f"{self.game.canto_truco.name}: Quiero **Vale cuatro**", color=0xffff00)
             await edit_truco_embed.edit(embed=embed)
             await interaction.response.edit_message(view=self.game.truco_view)
 
@@ -513,12 +740,15 @@ class ValeCuatroView(discord.ui.View):
     @discord.ui.button(label=f"Quiero", style=discord.ButtonStyle.success)
     async def quiero_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.game.opponent_truco.name == interaction.user.display_name:
+            self.game.hay_truco = False
             edit_truco_embed = await self.game.channel.fetch_message(self.game.truco_embed_id)
             embed = discord.Embed(title=f"{self.game.opponent_truco.name}: Quiero", color=0x08ff31)
             await edit_truco_embed.edit(embed=embed, view=None)
             self.game.action = f"**`{self.game.opponent_truco.name} aceptó el Vale cuatro`**"
             self.game.vale4 = True
             await self.game.edit_embed()
+            if self.game.canto_truco.name == self.game.players[0].name: await self.game.hand_view1.enable_all()
+            else: await self.game.hand_view2.enable_all()
             await edit_truco_embed.delete(delay=2)
 
     @discord.ui.button(label=f"No quiero", style=discord.ButtonStyle.danger)
@@ -556,6 +786,9 @@ class Game:
         self.retruco = False
         self.vale4 = False
         self.envido = False
+        self.envido2 = False
+        self.real_envido = False
+        self.falta_envido = False
         self.turn = 0
         self.player1_rounds = 0                         
         self.player2_rounds = 0
@@ -584,16 +817,18 @@ class Game:
         self.opponent_envido = opponent
         self.canto_envido = player
         self.envido = True
-        envido_embed = discord.Embed(title=f"{player.name} cantó **envido**.", colour=discord.Colour.green())
+        envido_embed = discord.Embed(title=f"{player.name}: **Envido**.", color=0xffff00)
         envido_embed = await self.channel.send(embed=envido_embed, view=self.envido_view)
         self.envido_embed_id = envido_embed.id
         return envido_embed
     
     async def truco_embed(self, player, opponent):
+        await self.hand_view1.disable_all()
+        await self.hand_view2.disable_all()
         self.opponent_truco = opponent
         self.canto_truco = player
         self.hay_truco = True
-        truco_embed = discord.Embed(title=f"{player.name} cantó **truco**.", colour=discord.Colour.green())
+        truco_embed = discord.Embed(title=f"{player.name}: **Truco**", color=0xffff00)
         truco_embed = await self.channel.send(embed=truco_embed, view=self.truco_view)
         self.truco_embed_id = truco_embed.id
         return truco_embed
@@ -698,9 +933,13 @@ class Game:
                 self.player2_view.add_item(DefaultButton(self, pos2, label=str(card), style=discord.ButtonStyle.secondary, emoji=f"{card.emote}", custom_id=str(card)))
 
             await self.hand()
+            print(self.players[0].points)
+            print(self.players[1].points)
+            print(await self.is_game_over())
             if not await self.is_game_over(): 
-                await asyncio.sleep(2)
+                asyncio.sleep(2)
                 await self.reset_hand()
+            else: await self.end_game()
 
 
     async def end_game(self):    
@@ -735,10 +974,13 @@ class Game:
         self.player1_view = None
         self.player2_view = None
         self.truco = False
-        self.retruco= False
+        self.retruco = False
         self.vale4 = False
         self.hay_truco = False
         self.envido = False
+        self.envido2 = False
+        self.real_envido = False
+        self.falta_envido = False
         self.player1_rounds = 0                         
         self.player2_rounds = 0
         self.player1_card_played = None  
@@ -758,10 +1000,10 @@ class Game:
         delete_mesa1_msg = await self.channel.fetch_message(self.mesa_msg_id)
         delete_mesa2_msg = await self.channel.fetch_message(self.mesa_msg_id1)
         delete_mesa3_msg = await self.channel.fetch_message(self.mesa_msg_id2)
-        await delete_embed_msg.delete()
-        await delete_mesa1_msg.delete()
-        await delete_mesa2_msg.delete()
-        await delete_mesa3_msg.delete()
+        await delete_embed_msg.delete(delay=2)
+        await delete_mesa1_msg.delete(delay=2)
+        await delete_mesa2_msg.delete(delay=2)
+        await delete_mesa3_msg.delete(delay=2)
 
 
     async def start_hand(self):           # Crear manos
@@ -772,7 +1014,7 @@ class Game:
                 await player.add_card(card)
 
     async def is_game_over(self):
-        if (self.players[0].points or self.players[1].points) == self.game_mode: return True
+        if (self.players[0].points or self.players[1].points) >= self.game_mode: return True
         else: return False
 
     async def hand(self):
@@ -781,7 +1023,7 @@ class Game:
         flag1 = False
         flag2 = False
         flag3 = False  
-        while True:  
+        while True:
             points_round=0
             if await self.is_game_over(): break
             if self.player1_rounds!=2 or self.player2_rounds!=2:                        # PARDAS
@@ -798,8 +1040,7 @@ class Game:
                     self.action = f"**`{player2.name} ganó la mano.`**"
                     break
 
-                if not flag1 and (self.c1 is not None and self.c4 is not None):
-                    print("test1")              
+                if not flag1 and (self.c1 is not None and self.c4 is not None):          
                     if self.c1.rank > self.c4.rank:      
                         self.player1_rounds+=1
                         self.round+=1
@@ -858,8 +1099,7 @@ class Game:
                                 await asyncio.sleep(1)
                     flag1 = True
 
-                if not flag2 and self.c2 is not None and self.c5 is not None:
-                    print("test2")            
+                if not flag2 and self.c2 is not None and self.c5 is not None:      
                     if self.c2.rank > self.c5.rank:                 
                         self.player1_rounds+=1
                         self.round+=1
@@ -917,8 +1157,7 @@ class Game:
                                 await asyncio.sleep(1)
                     flag2 = True
 
-                if not flag3 and self.c3 is not None and self.c6 is not None:
-                    print("test3")               
+                if not flag3 and self.c3 is not None and self.c6 is not None:              
                     if self.c3.rank > self.c6.rank:                 
                         self.player1_rounds+=1
                         self.round+=1
@@ -934,20 +1173,27 @@ class Game:
                         await self.edit_embed()
                     flag3 = True
                 
-            if self.player1_rounds==2:                                   
+            if self.player1_rounds==2:          # check round winner + points                            
                 points_round+=1
-                if self.truco: points_round+=1
-                elif self.retruco: points_round+=1
-                elif self.vale4: points_round+=1
+                if self.truco: 
+                    points_round+=1                         
+                    if self.retruco: 
+                        points_round+=1
+                        if self.vale4: 
+                            points_round+=1
                 player1.points+=points_round
                 self.action = f"**`{player1.name} ganó la mano.`**"
                 await self.edit_embed()
                 break
-            elif self.player2_rounds==2:                                   # Verificar el ganador de la mano
+
+            elif self.player2_rounds==2:                               
                 points_round+=1
-                if self.truco: points_round+=1
-                elif self.retruco: points_round+=1
-                elif self.vale4: points_round+=1
+                if self.truco: 
+                    points_round+=1
+                    if self.retruco:
+                        points_round+=1
+                        if self.vale4:
+                            points_round+=1
                 player2.points+=points_round
                 self.action = f"**`{player2.name} ganó la mano.`**"
                 await self.edit_embed()
@@ -1069,17 +1315,40 @@ class Game:
                 if len(valores) == 1: puntos_envido_p2 = valores[0] + 20
                 else: puntos_envido_p2 = valores[0]+valores[1]+20
 
+
+        def falta_envido(self):
+            if puntos_envido_p1 > puntos_envido_p2:
+                if (self.players[0].points and self.players[1].points) < 15: self.players[0].points = 30
+                elif self.players[0].points >= 15: self.players[0].points += (30-self.players[0].points)       
+                else: self.players[0].points += (30-self.players[1].points)
+            elif puntos_envido_p2 > puntos_envido_p1:
+                if (self.players[0].points and self.players[1].points) < 15: self.players[1].points = 30
+                elif self.players[0].points >= 15: self.players[1].points += (30-self.players[0].points)       
+                else: self.players[1].points += (30-self.players[1].points) 
+
         if puntos_envido_p1 > puntos_envido_p2: 
             self.players[0].points += 2
+            if self.envido2: self.players[0].points += 2
+            if self.real_envido: self.players[0].points += 3
+            if self.falta_envido: falta_envido(self)
             self.action = f"**`{self.players[0].name} ganó el envido`**."
         elif puntos_envido_p2 > puntos_envido_p1: 
             self.players[1].points += 2
+            if self.envido2: self.players[1].points += 2
+            if self.real_envido: self.players[1].points += 3
+            if self.falta_envido: falta_envido(self)
             self.action = f"**`{self.players[1].name} ganó el envido`**."
         elif self.mano == self.players[0]: 
             self.players[0].points += 2
+            if self.envido2: self.players[0].points += 2
+            if self.real_envido: self.players[0].points += 3
+            if self.falta_envido: falta_envido(self)
             self.action = f"**`{self.players[0].name} ganó el envido`**."
         else: 
             self.players[1] += 2
+            if self.envido2: self.players[1].points += 2
+            if self.real_envido: self.players[1].points += 3
+            if self.falta_envido: falta_envido(self)
             self.action = f"**`{self.players[1].name} ganó el envido`**."
         return f"*{self.players[0].name}*: **{puntos_envido_p1}**\n*{self.players[1].name}*: **{puntos_envido_p2}**"
 
