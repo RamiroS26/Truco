@@ -6,11 +6,10 @@ from truco import Game
 class TrucoCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.game_dict = {}
+        self.game_dict = {}     # dict will all current games/players
     
     @commands.hybrid_command(name="truco", description="Empezar una partida de truco")
     async def truco(self, ctx: commands.Context, oponente: discord.Member, puntos: Literal[15, 30]):        # select option from list
-        print(self.game_dict)
         if oponente == ctx.author:
             await ctx.send("No podés empezar una partida con vos msismo.")
             return
@@ -41,8 +40,9 @@ class MainView(discord.ui.View):
         if interaction.user == self.oponente:
             await interaction.message.edit(content="Partida aceptada, el juego comienza.", view=None, embed=None)
             truco_game = Game(self.p1, self.oponente, interaction.channel, self.puntos)
-            self.truco_cog.game_dict[(self.p1.id, self.oponente.id)] = truco_game
+            self.truco_cog.game_dict[(self.p1.id, self.oponente.id)] = truco_game       # add players/game to dict
             await truco_game.run_game(interaction)
+            del self.truco_cog.game_dict[(self.p1.id, self.oponente.id)]        
 
     @discord.ui.button(label="Rechazar", style=discord.ButtonStyle.danger)
     async def rechazar(self, interaction: discord.Interaction, button: discord.ui.Button):
