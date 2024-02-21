@@ -145,6 +145,22 @@ class Player:
             chain += f"{card.emote} "
         return chain
 
+    async def get_emote_points(self, points):
+        emote_points = {
+            0: "⠀",
+            1: "<:1p:1209908832680284190>",
+            2: "<:2p:1209908834856869938>",
+            3: "<:3p:1209908836463284365>",
+            4: "<:4p:1209908837973499964>",
+            5: "<:5p:1209908159855071284>"
+        }
+
+        # construct emotes from 6
+        for i in range(6, 31):
+            emote_points[i] = emote_points[5] + emote_points[i - 5]
+
+        return emote_points.get(points)
+
     # debugging (delete later)  
     def __repr__(self):     
         hand_info = ", ".join(str(card) for card in self.hand)
@@ -1015,12 +1031,12 @@ class Game:
         )
         if self.mano == self.players[0]: 
             mano = self.players[0]
-            no_mano = self.players[1]
+            pie = self.players[1]
         else: 
             mano = self.players[1]
-            no_mano = self.players[0]
+            pie = self.players[0]
 
-        embed_msg.add_field(name="Jugadores", value=f"🖐 *{mano.name}* - **{mano.points} puntos**\n👣 *{no_mano.name}* - **{no_mano.points} puntos**", inline=False)
+        embed_msg.add_field(name="Jugadores", value=f"🖐 *{mano.name}* - {await mano.get_emote_points(mano.points)}\n👣 *{pie.name}* - {await pie.get_emote_points(pie.points)} ", inline=False)
 
         embed_msg.set_author(name=f"Turno de {mano.name}", icon_url=mano.avatar)
         embed_msg.set_thumbnail(url="https://cdn.discordapp.com/attachments/1174763587110178887/1174763599474999357/profile.png?ex=6568c6dc&is=655651dc&hm=656cc595ccf8070d9ac77b92c647cd716be55923c9b344c271d2d4dd97a9d9fd&")
@@ -1042,16 +1058,16 @@ class Game:
 
         if self.mano == self.players[0]: 
             mano = self.players[0]
-            no_mano = self.players[1]
+            pie = self.players[1]
         else: 
             mano = self.players[1]
-            no_mano = self.players[0]
+            pie = self.players[0]
         
         if self.turn == 0: turn = self.players[0]
         else: turn = self.players[1]
 
 
-        embed_edit.add_field(name="Jugadores", value=f"🖐 *{mano.name}* - **{mano.points} puntos**\n👣 *{no_mano.name}* - **{no_mano.points} puntos**", inline=False)
+        embed_edit.add_field(name="Jugadores", value=f"🖐 *{mano.name}* - {await mano.get_emote_points(mano.points)} \n👣 *{pie.name}* - {await pie.get_emote_points(pie.points)} ", inline=False)
 
         embed_edit.set_author(name=f"Turno de {turn.name}", icon_url=turn.avatar)
         embed_edit.set_thumbnail(url="https://cdn.discordapp.com/attachments/1174763587110178887/1174763599474999357/profile.png?ex=6568c6dc&is=655651dc&hm=656cc595ccf8070d9ac77b92c647cd716be55923c9b344c271d2d4dd97a9d9fd&")
@@ -1215,7 +1231,6 @@ class Game:
             points_round = 0
             if await self.is_game_over(): 
                 break
-            print(self.pardas1, self.pardas2, self.pardas3)
             await self.verify_pardas()
             
             if not flag1 and (self.c1 is not None and self.c4 is not None):
