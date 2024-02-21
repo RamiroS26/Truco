@@ -1241,7 +1241,6 @@ class Game:
                     self.turn = 1
                     await self.edit_embed()
                     while True:
-                        print("loop 1")
                         if await self.is_game_over(): 
                             break
                         if self.player2_rounds == 2 or self.player1_rounds == 2:
@@ -1258,7 +1257,6 @@ class Game:
                         self.turn = 0
                         await self.edit_embed()
                         while True:
-                            print("loop 2")
                             if await self.is_game_over(): 
                                 break
                             if self.player2_rounds == 2 or self.player1_rounds == 2:
@@ -1272,7 +1270,6 @@ class Game:
                         self.turn = 1
                         await self.edit_embed()
                         while True:
-                            print("loop 3")
                             if await self.is_game_over(): 
                                 break
                             if self.player2_rounds == 2 or self.player1_rounds == 2:
